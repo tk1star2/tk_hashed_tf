@@ -1,8 +1,8 @@
 #!/bin/bash
 
+export NET="hashed"
 export GPUID=0
-export NET="squeezeDet"
-export TRAIN_DIR="/tmp/bichen/logs/SqueezeDet/"
+export TRAIN_DIR="./MNIST"
 
 if [ $# -eq 0 ]
 then
@@ -10,7 +10,7 @@ then
   echo " "
   echo "options:"
   echo "-h, --help                show brief help"
-  echo "-net                      (squeezeDet|squeezeDet+|vgg16|resnet50)"
+  echo "-net                      (hashed|???)"
   echo "-gpu                      gpu id"
   echo "-train_dir                directory for training logs"
   exit 0
@@ -23,7 +23,7 @@ while test $# -gt 0; do
       echo " "
       echo "options:"
       echo "-h, --help                show brief help"
-      echo "-net                      (squeezeDet|squeezeDet+|vgg16|resnet50)"
+      echo "-net                      (hashed|???)"
       echo "-gpu                      gpu id"
       echo "-train_dir                directory for training logs"
       exit 0
@@ -51,13 +51,10 @@ done
 
 case "$NET" in 
   "hashed")
-    export PRETRAINED_MODEL_PATH="./data/SqueezeNet/squeezenet_v1.1.pkl"
+    export PRETRAINED_MODEL_PATH="../pretrain/MNIST/MNIST.ckpt.meta" #data : variable, 
     ;;
-  "resnet50")
+  "hashed-LSM")
     export PRETRAINED_MODEL_PATH="./data/ResNet/ResNet-50-weights.pkl"
-    ;;
-  "vgg16")
-    export PRETRAINED_MODEL_PATH="./data/VGG16/VGG_ILSVRC_16_layers_weights.pkl"
     ;;
   *)
     echo "net architecture not supported."
@@ -66,13 +63,12 @@ case "$NET" in
 esac
 
 
-python ./src/train.py \
+python train.py \
   --dataset=MNIST \
-  --pretrained_model_path=$PRETRAINED_MODEL_PATH \
-  --data_path=./data/KITTI \
   --image_set=train \
+  --summary_step=10 \
+  --checkpoint_step=50 \
   --train_dir="$TRAIN_DIR/train" \
   --net=$NET \
-  --summary_step=100 \
-  --checkpoint_step=500 \
+  --pretrained_model_path=$PRETRAINED_MODEL_PATH \
   --gpu=$GPUID

@@ -4,8 +4,8 @@ import sys
 import gzip
 import numpy
 
-MNIST_PATH = '~/tk_hashed_tf/data/MNIST'
-SAVE_PATH='~/tk_hashed_tf/pretrain'
+MNIST_PATH = '../data/MNIST'
+SAVE_PATH='../pretrain/MNIST'
 VALIDATION_SIZE = 5000
 class DataSet(object):
   def __init__(self, images, labels, fake_data=False, one_hot=False,
@@ -151,9 +151,10 @@ data_sets.validation = DataSet(validation_images, validation_labels, dtype=tf.fl
 print('datasets train is ', data_sets.train);
 
 '''------------------------------------------------------------------'''
+
 BATCH_SIZE = 100;
 TOTAL_BATCH = int();
-EPOCH = 1000;
+EPOCH = 10;#1000
 EPOCH_DISPLAY = 10;
 LEARNING_RATE = 0.001;
 
@@ -183,6 +184,7 @@ optimizer = tf.train.AdamOptimizer(LEARNING_RATE).minimize(cost);
 #optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(cost); 
 
 #initialize
+saver = tf.train.Saver(tf.all_variables());
 init = tf.global_variables_initializer();
 sess = tf.Session();
 sess.run(init);
@@ -199,16 +201,60 @@ for epoch in range(EPOCH):
 		avg_cost += sess.run(cost, feed_dict={X:batch_xs, Y:batch_ys});
 
 	if epoch % EPOCH_DISPLAY ==0 :
-		print "Epoch:", "%04d" % (epoch+1), "cost=", "{:.9f}".format(avg_cost)
+		print ("Epoch:", "%04d" % (epoch+1), "cost=", "{:.9f}".format(avg_cost));
 
-print "optimization Finished"
-'''------------------------------------------------------------------'''
+print("optimization Finished")
 
 is_correct = tf.equal(tf.argmax(hypothesis,1), tf.argmax(Y,1));
 accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32));
 print('Accuracy : ', sess.run(accuracy,feed_dict={X:data_sets.test.images,Y:data_sets.test.labels}));
 
 '''------------------------------------------------------------------'''
+'''
+#import keras
+#from keras.models import Sequential
+#from keras import backend as K
+from tensorflow.python import keras
+from keras.models import Sequential
+
+model = Sequential();
+model.add(Dense(1000,activation='relu'));
+model.add(Dense(10,activation='softmax'));
+
+model.compile(loss=keras.losses.categorical_crossentropy, optimizer = keras.optimizers.Adadelta(), metrics=['accuracy']);
+model.fit(datasets.train.images,datasets.train.labels, batch_size=BATCH_SIE, epochs=EPOCH, verbose=1, validation_data=(datasets.validation.images.datasets.validation.labels));
+score = model.evaluate(datasets.test.images,datasets.test.labels, verbose=0);
+print('Test loss:', score[0]);
+print('test accuracy:',score[1]);
+
+'''
+'''------------------------------------------------------------------'''
+
+W1_arr = W1.eval(sess);
+B1_arr = B1.eval(sess);
+W2_arr = W2.eval(sess);
+B2_arr = B2.eval(sess);
+
+#with open(os.path.join(SAVE_PATH, 'MNIST.ckpt')) as f:
+saver.save(sess,os.path.join(SAVE_PATH,"./MNIST.ckpt"));
+
+#tup_ob = {'a' : 3, 'b': 5};
+#list_ob = ['string', 1023, 103.4];
+save_tuple = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
+
+#from sklearn.externals import joblib 
 import pickle
-with open('MNIST.pkl', 'wb') as f:
-	pickle.dump(,f);
+#joblib.dump([W1,B1,W2,B2],os.path.join(SAVE_PATH, 'MNIST.pkl'));
+#pickle.dump(W1,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
+#pickle.dump(B1,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
+#pickle.dump(W2,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
+#pickle.dump(B2,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
+
+#os.getcwd()
+with open(os.path.join(SAVE_PATH, 'MNIST.pkl'), 'wb') as f:
+	pickle.dump(save_tuple, f);
+
+
+'''------------------------------------------------------------------'''
+
+

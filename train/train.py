@@ -2,6 +2,15 @@
 
 """Train"""
 
+from ..pretrain import train as pretrain
+import hashed
+import config
+import os
+
+import tensorflow as tf
+import threading
+import time
+'''
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -10,177 +19,92 @@ import cv2
 from datetime import datetime
 import os.path
 import sys
-import time
 
 import numpy as np
 from six.moves import xrange
-import tensorflow as tf
-import threading
 
 from config import *
 from dataset import pascal_voc, kitti
 from utils.util import sparse_to_dense, bgr_to_rgb, bbox_transform
 from nets import *
-
+'''
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('dataset', 'KITTI',
+tf.app.flags.DEFINE_string('dataset', 'MNIST',
                            """Currently only support KITTI dataset.""")
-tf.app.flags.DEFINE_string('data_path', '', """Root directory of data""")
 tf.app.flags.DEFINE_string('image_set', 'train',
                            """ Can be train, trainval, val, or test""")
-tf.app.flags.DEFINE_string('year', '2007',
-                            """VOC challenge year. 2007 or 2012"""
-                            """Only used for Pascal VOC dataset""")
-tf.app.flags.DEFINE_string('train_dir', '/tmp/bichen/logs/squeezeDet/train',
-                            """Directory where to write event logs """
-                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 1000000,
                             """Maximum number of batches to run.""")
-tf.app.flags.DEFINE_string('net', 'squeezeDet',
+tf.app.flags.DEFINE_integer('summary_step', 10,
+                            """Number of steps to save summary.""")
+tf.app.flags.DEFINE_integer('checkpoint_step', 50,
+                            """Number of steps to save summary.""")
+tf.app.flags.DEFINE_string('train_dir', './MNIST/train',
+                            """Directory where to write event logs """
+                            """and checkpoint.""")
+tf.app.flags.DEFINE_string('net', 'hashedNet',
                            """Neural net architecture. """)
 tf.app.flags.DEFINE_string('pretrained_model_path', '',
                            """Path to the pretrained model.""")
-tf.app.flags.DEFINE_integer('summary_step', 10,
-                            """Number of steps to save summary.""")
-tf.app.flags.DEFINE_integer('checkpoint_step', 1000,
-                            """Number of steps to save summary.""")
 tf.app.flags.DEFINE_string('gpu', '0', """gpu id.""")
 
-
-def _draw_box(im, box_list, label_list, color=(0,255,0), cdict=None, form='center'):
-  assert form == 'center' or form == 'diagonal', \
-      'bounding box format not accepted: {}.'.format(form)
-
-  for bbox, label in zip(box_list, label_list):
-
-    if form == 'center':
-      bbox = bbox_transform(bbox)
-
-    xmin, ymin, xmax, ymax = [int(b) for b in bbox]
-
-    l = label.split(':')[0] # text before "CLASS: (PROB)"
-    if cdict and l in cdict:
-      c = cdict[l]
-    else:
-      c = color
-
-    # draw box
-    cv2.rectangle(im, (xmin, ymin), (xmax, ymax), c, 1)
-    # draw label
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    cv2.putText(im, label, (xmin, ymax), font, 0.3, c, 1)
-
-def _viz_prediction_result(model, images, bboxes, labels, batch_det_bbox,
-                           batch_det_class, batch_det_prob):
-  mc = model.mc
-
-  for i in range(len(images)):
-    # draw ground truth
-    _draw_box(
-        images[i], bboxes[i],
-        [mc.CLASS_NAMES[idx] for idx in labels[i]],
-        (0, 255, 0))
-
-    # draw prediction
-    det_bbox, det_prob, det_class = model.filter_prediction(
-        batch_det_bbox[i], batch_det_prob[i], batch_det_class[i])
-
-    keep_idx    = [idx for idx in range(len(det_prob)) \
-                      if det_prob[idx] > mc.PLOT_PROB_THRESH]
-    det_bbox    = [det_bbox[idx] for idx in keep_idx]
-    det_prob    = [det_prob[idx] for idx in keep_idx]
-    det_class   = [det_class[idx] for idx in keep_idx]
-
-    _draw_box(
-        images[i], det_bbox,
-        [mc.CLASS_NAMES[idx]+': (%.2f)'% prob \
-            for idx, prob in zip(det_class, det_prob)],
-        (0, 0, 255))
-
-
+#---------------------------------------------------------------------------------
 def train():
   """Train SqueezeDet model"""
-  assert FLAGS.dataset == 'KITTI', \
-      'Currently only support KITTI dataset'
+  assert FLAGS.dataset == 'MNIST', \
+      'Currently only support MNIST dataset'
 
   os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu
 
   with tf.Graph().as_default():
 
-    assert FLAGS.net == 'vgg16' or FLAGS.net == 'resnet50' \
-        or FLAGS.net == 'squeezeDet' or FLAGS.net == 'squeezeDet+' \
-        or FLAGS.net == 'squeezeDet_gpu0' or FLAGS.net == 'squeezeDet_gpu1', \
+    assert FLAGS.net == 'hashed' or FLAGS.net == 'hashed2' \
         'Selected neural net architecture not supported: {}'.format(FLAGS.net)
-    if FLAGS.net == 'vgg16':
-      mc = kitti_vgg16_config()
+    if FLAGS.net == 'hashed':
+      mc = config() # 1.config.py
       mc.IS_TRAINING = True
       mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
-      model = VGG16ConvDet(mc)
-    elif FLAGS.net == 'resnet50':
-      mc = kitti_res50_config()
-      mc.IS_TRAINING = True
-      mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
-      model = ResNet50ConvDet(mc)
-    elif FLAGS.net == 'squeezeDet':
-      mc = kitti_squeezeDet_config()
-      mc.IS_TRAINING = True
-      mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
-      model = SqueezeDet(mc)
-    elif FLAGS.net == 'squeezeDet_gpu0':
-      mc = kitti_squeezeDet_config()
-      mc.IS_TRAINING = True
-      mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
-      model = SqueezeDet_gpu0(mc)
-    elif FLAGS.net == 'squeezeDet_gpu1':
-      mc = kitti_squeezeDet_config()
-      mc.IS_TRAINING = True
-      mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
-      model = SqueezeDet_gpu1(mc)
-    elif FLAGS.net == 'squeezeDet+':
-      mc = kitti_squeezeDetPlus_config()
-      mc.IS_TRAINING = True
-      mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
-      model = SqueezeDetPlus(mc)
+      model = hashed(mc) # 2.hashed.py
+    elif FLAGS.net == 'hashed2':
+      #mc = kitti_res50_config()
+      #mc.IS_TRAINING = True
+      #mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
+      #model = ResNet50ConvDet(mc)
+	#----------------------
+	train_images = pretrain.MNIST_download(MNIST_PATH, 'train', 'images');
+	train_labels = pretrain.MNIST_download(MNIST_PATH, 'train', 'labels');
+	test_images =  pretrain.MNIST_download(MNIST_PATH, 'test', 'images');
+	test_labels =  pretrain.MNIST_download(MNIST_PATH, 'test', 'labels');
 
-    imdb = kitti(FLAGS.image_set, FLAGS.data_path, mc)
+	validation_images = train_images[:VALIDATION_SIZE];
+	validation_labels = train_labels[:VALIDATION_SIZE];
+	train_images = train_images[VALIDATION_SIZE:];
+	train_labels = train_labels[VALIDATION_SIZE:];
 
-    # save model size, flops, activations by layers
-    with open(os.path.join(FLAGS.train_dir, 'model_metrics.txt'), 'w') as f:
-      f.write('Number of parameter by layer:\n')
-      count = 0
-      for c in model.model_size_counter:
-        f.write('\t{}: {}\n'.format(c[0], c[1]))
-        count += c[1]
-      f.write('\ttotal: {}\n'.format(count))
+	print('train-labels is ', train_labels);
 
-      count = 0
-      f.write('\nActivation size by layer:\n')
-      for c in model.activation_counter:
-        f.write('\t{}: {}\n'.format(c[0], c[1]))
-        count += c[1]
-      f.write('\ttotal: {}\n'.format(count))
+	#data_sets = DataSet([],[],fake_data=True, one_hot=True, dtype=tf.float32);
+	class DataSets(object):
+		pass
+	data_sets = DataSets();
+	data_sets.test =  pretrain.DataSet(test_images, test_labels, dtype=tf.float32, one_hot=True);
+	data_sets.train =  pretrain.DataSet(train_images, train_labels, dtype=tf.float32, one_hot=True);
+	data_sets.validation =  pretrain.DataSet(validation_images, validation_labels, dtype=tf.float32, one_hot=True);
 
-      count = 0
-      f.write('\nNumber of flops by layer:\n')
-      for c in model.flop_counter:
-        f.write('\t{}: {}\n'.format(c[0], c[1]))
-        count += c[1]
-      f.write('\ttotal: {}\n'.format(count))
-    f.close()
-    print ('Model statistics saved to {}.'.format(
-      os.path.join(FLAGS.train_dir, 'model_metrics.txt')))
-
+	print('datasets train is ', data_sets.train);
+	#----------------------
     def _load_data(load_to_placeholder=True):
       # read batch input
       image_per_batch, label_per_batch, box_delta_per_batch, aidx_per_batch, \
           bbox_per_batch = imdb.read_batch()
-
+	  # tk :imdb is about kitti dataset
       label_indices, bbox_indices, box_delta_values, mask_indices, box_values, \
           = [], [], [], [], []
       aidx_set = set()
       num_discarded_labels = 0
       num_labels = 0
+
       for i in range(len(label_per_batch)): # batch_size
         for j in range(len(label_per_batch[i])): # number of annotations
           num_labels += 1
@@ -195,10 +119,6 @@ def train():
             box_values.extend(bbox_per_batch[i][j])
           else:
             num_discarded_labels += 1
-
-      if mc.DEBUG_MODE:
-        print ('Warning: Discarded {}/({}) labels that are assigned to the same '
-               'anchor'.format(num_discarded_labels, num_labels))
 
       if load_to_placeholder:
         image_input = model.ph_image_input
@@ -234,6 +154,7 @@ def train():
 
       return feed_dict, image_per_batch, label_per_batch, bbox_per_batch
 
+	#-----------------------------------------------------------------
     def _enqueue(sess, coord):
       try:
         while not coord.should_stop():
@@ -245,7 +166,7 @@ def train():
           print ("Finished enqueue")
       except Exception, e:
         coord.request_stop(e)
-
+	#-----------------------------------------------------------------
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
 
     saver = tf.train.Saver(tf.global_variables())
@@ -266,13 +187,13 @@ def train():
       enq_threads = []
       for _ in range(mc.NUM_THREAD):
         enq_thread = threading.Thread(target=_enqueue, args=[sess, coord])
-        # enq_thread.isDaemon()
         enq_thread.start()
         enq_threads.append(enq_thread)
 
     threads = tf.train.start_queue_runners(coord=coord, sess=sess)
     run_options = tf.RunOptions(timeout_in_ms=60000)
 
+	#***************************************************************************
     # try: 
     for step in xrange(FLAGS.max_steps):
       if coord.should_stop():
@@ -283,6 +204,7 @@ def train():
 
       start_time = time.time()
 
+	  #*********************************************************
       if step % FLAGS.summary_step == 0:
         feed_dict, image_per_batch, label_per_batch, bbox_per_batch = \
             _load_data(load_to_placeholder=False)
@@ -318,6 +240,7 @@ def train():
           _, loss_value, conf_loss, bbox_loss, class_loss = sess.run(
               [model.train_op, model.loss, model.conf_loss, model.bbox_loss,
                model.class_loss], feed_dict=feed_dict)
+	  #*********************************************************
 
       duration = time.time() - start_time
 
@@ -344,7 +267,9 @@ def train():
     # finally:
     #   coord.request_stop()
     #   coord.join(threads)
+	#***************************************************************************
 
+#---------------------------------------------------------------------------------
 def main(argv=None):  # pylint: disable=unused-argument
   if tf.gfile.Exists(FLAGS.train_dir):
     tf.gfile.DeleteRecursively(FLAGS.train_dir)
