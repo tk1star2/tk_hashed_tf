@@ -51,7 +51,7 @@ done
 
 case "$NET" in 
   "hashed")
-    export PRETRAINED_MODEL_PATH="../pretrain/MNIST/MNIST.ckpt.meta" #data : variable, 
+    export PRETRAINED_MODEL_PATH="../pretrain/MNIST/MNIST.pkl" #data : variable, 
     ;;
   "hashed-LSM")
     export PRETRAINED_MODEL_PATH="./data/ResNet/ResNet-50-weights.pkl"

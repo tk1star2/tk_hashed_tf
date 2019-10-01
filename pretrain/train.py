@@ -128,133 +128,137 @@ def MNIST_download(filepath, train_test, image_label):
 		else :
 			return extract_labels(path, one_hot=True);
 
-train_images = MNIST_download(MNIST_PATH, 'train', 'images');
-train_labels = MNIST_download(MNIST_PATH, 'train', 'labels');
-test_images = MNIST_download(MNIST_PATH, 'test', 'images');
-test_labels = MNIST_download(MNIST_PATH, 'test', 'labels');
+def train():
+	train_images = MNIST_download(MNIST_PATH, 'train', 'images');
+	train_labels = MNIST_download(MNIST_PATH, 'train', 'labels');
+	test_images = MNIST_download(MNIST_PATH, 'test', 'images');
+	test_labels = MNIST_download(MNIST_PATH, 'test', 'labels');
 
-validation_images = train_images[:VALIDATION_SIZE];
-validation_labels = train_labels[:VALIDATION_SIZE];
-train_images = train_images[VALIDATION_SIZE:];
-train_labels = train_labels[VALIDATION_SIZE:];
+	validation_images = train_images[:VALIDATION_SIZE];
+	validation_labels = train_labels[:VALIDATION_SIZE];
+	train_images = train_images[VALIDATION_SIZE:];
+	train_labels = train_labels[VALIDATION_SIZE:];
 
-print('train-labels is ', train_labels);
+	print('train-labels is ', train_labels);
 
-#data_sets = DataSet([],[],fake_data=True, one_hot=True, dtype=tf.float32);
-class DataSets(object):
-	pass
-data_sets = DataSets();
-data_sets.test = DataSet(test_images, test_labels, dtype=tf.float32, one_hot=True);
-data_sets.train = DataSet(train_images, train_labels, dtype=tf.float32, one_hot=True);
-data_sets.validation = DataSet(validation_images, validation_labels, dtype=tf.float32, one_hot=True);
+	#data_sets = DataSet([],[],fake_data=True, one_hot=True, dtype=tf.float32);
+	class DataSets(object):
+		pass
+	data_sets = DataSets();
+	data_sets.test = DataSet(test_images, test_labels, dtype=tf.float32, one_hot=True);
+	data_sets.train = DataSet(train_images, train_labels, dtype=tf.float32, one_hot=True);
+	data_sets.validation = DataSet(validation_images, validation_labels, dtype=tf.float32, one_hot=True);
 
-print('datasets train is ', data_sets.train);
+	print('datasets train is ', data_sets.train);
+
+	'''------------------------------------------------------------------'''
+
+	BATCH_SIZE = 100;
+	TOTAL_BATCH = int();
+	EPOCH =1000;
+	EPOCH_DISPLAY = 10;
+	LEARNING_RATE = 0.001;
+	
+	X = tf.placeholder(tf.float32, [None,784]);
+	Y = tf.placeholder(tf.float32, [None,10]);
+	
+	#initialize problem!!
+	#W1 = tf.Variable(tf.zeros([784,1000]));
+	#B1 = tf.Variable(tf.zeros([1000]));
+	#W2 = tf.Variable(tf.zeros([1000,10]));
+	#B2 = tf.Variable(tf.zeros([10]));
+	W1 = tf.Variable(tf.random_normal([784,1000],stddev=0.01));
+	B1 = tf.Variable(tf.zeros([1000]));
+	W2 = tf.Variable(tf.random_normal([1000,10],stddev=0.01));
+	B2 = tf.Variable(tf.zeros([10]));
+
+	#model
+	act1 = tf.nn.relu(tf.matmul(X,W1)+B1);
+	act2 = tf.matmul(act1,W2)+B2;
+	hypothesis = act2;
+	#hypothesis=tf.nn.softmax(act2);
+
+	#error
+	cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=hypothesis, labels=Y));
+	#cost = tf.reduce_mean(-tf.reduce_sum(Y*tf.log(hypothesis), reduction_indices=1));
+	optimizer = tf.train.AdamOptimizer(LEARNING_RATE).minimize(cost);
+	#optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(cost); 
+
+	#initialize
+	saver = tf.train.Saver(tf.all_variables());
+	init = tf.global_variables_initializer();
+	sess = tf.Session();
+	sess.run(init);
+
+	for epoch in range(EPOCH):
+		avg_cost = 0.;
+
+		total_batch = int(data_sets.train.num_examples/BATCH_SIZE);
+
+		for i in range(total_batch):
+			batch_xs, batch_ys = data_sets.train.next_batch(BATCH_SIZE);
+			#print("****size of batch xs is ", batch_xs.shape, "batch ys is ", batch_ys.shape);
+			sess.run(optimizer, feed_dict={X:batch_xs, Y:batch_ys});
+			avg_cost += sess.run(cost, feed_dict={X:batch_xs, Y:batch_ys});
+
+		if epoch % EPOCH_DISPLAY ==0 :
+			print ("Epoch:", "%04d" % (epoch+1), "cost=", "{:.9f}".format(avg_cost));
+
+	print("optimization Finished")
+
+	is_correct = tf.equal(tf.argmax(hypothesis,1), tf.argmax(Y,1));
+	accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32));
+	print('Accuracy : ', sess.run(accuracy,feed_dict={X:data_sets.test.images,Y:data_sets.test.labels}));
+
+	'''------------------------------------------------------------------'''
+	'''
+	#import keras
+	#from keras.models import Sequential
+	#from keras import backend as K
+	from tensorflow.python import keras
+	from keras.models import Sequential
+
+	model = Sequential();
+	model.add(Dense(1000,activation='relu'));
+	model.add(Dense(10,activation='softmax'));
+	
+	model.compile(loss=keras.losses.categorical_crossentropy, optimizer = keras.optimizers.Adadelta(), metrics=['accuracy']);
+	model.fit(datasets.train.images,datasets.train.labels, batch_size=BATCH_SIE, epochs=EPOCH, verbose=1, validation_data=(datasets.validation.images.datasets.validation.labels));
+	score = model.evaluate(datasets.test.images,datasets.test.labels, verbose=0);
+	print('Test loss:', score[0]);
+	print('test accuracy:',score[1]);
+	
+	'''
+	'''------------------------------------------------------------------'''
+
+	W1_arr = W1.eval(sess);
+	B1_arr = B1.eval(sess);
+	W2_arr = W2.eval(sess);
+	B2_arr = B2.eval(sess);
+
+	#with open(os.path.join(SAVE_PATH, 'MNIST.ckpt')) as f:
+	saver.save(sess,os.path.join(SAVE_PATH,"./MNIST.ckpt"));
+
+	#tup_ob = {'a' : 3, 'b': 5};
+	#list_ob = ['string', 1023, 103.4];
+	save_tuple = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
+
+	#from sklearn.externals import joblib 
+	import pickle
+	#joblib.dump([W1,B1,W2,B2],os.path.join(SAVE_PATH, 'MNIST.pkl'));
+	#pickle.dump(W1,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
+	#pickle.dump(B1,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
+	#pickle.dump(W2,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
+	#pickle.dump(B2,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
+
+	#os.getcwd()
+	with open(os.path.join(SAVE_PATH, 'MNIST.pkl'), 'wb') as f:
+		pickle.dump(save_tuple, f);
+
 
 '''------------------------------------------------------------------'''
+def main(argv=None):
+	train();
 
-BATCH_SIZE = 100;
-TOTAL_BATCH = int();
-EPOCH = 10;#1000
-EPOCH_DISPLAY = 10;
-LEARNING_RATE = 0.001;
-
-X = tf.placeholder(tf.float32, [None,784]);
-Y = tf.placeholder(tf.float32, [None,10]);
-
-#initialize problem!!
-#W1 = tf.Variable(tf.zeros([784,1000]));
-#B1 = tf.Variable(tf.zeros([1000]));
-#W2 = tf.Variable(tf.zeros([1000,10]));
-#B2 = tf.Variable(tf.zeros([10]));
-W1 = tf.Variable(tf.random_normal([784,1000],stddev=0.01));
-B1 = tf.Variable(tf.zeros([1000]));
-W2 = tf.Variable(tf.random_normal([1000,10],stddev=0.01));
-B2 = tf.Variable(tf.zeros([10]));
-
-#model
-act1 = tf.nn.relu(tf.matmul(X,W1)+B1);
-act2 = tf.matmul(act1,W2)+B2;
-hypothesis = act2;
-#hypothesis=tf.nn.softmax(act2);
-
-#error
-cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=hypothesis, labels=Y));
-#cost = tf.reduce_mean(-tf.reduce_sum(Y*tf.log(hypothesis), reduction_indices=1));
-optimizer = tf.train.AdamOptimizer(LEARNING_RATE).minimize(cost);
-#optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(cost); 
-
-#initialize
-saver = tf.train.Saver(tf.all_variables());
-init = tf.global_variables_initializer();
-sess = tf.Session();
-sess.run(init);
-
-for epoch in range(EPOCH):
-	avg_cost = 0.;
-
-	total_batch = int(data_sets.train.num_examples/BATCH_SIZE);
-
-	for i in range(total_batch):
-		batch_xs, batch_ys = data_sets.train.next_batch(BATCH_SIZE);
-		#print("****size of batch xs is ", batch_xs.shape, "batch ys is ", batch_ys.shape);
-		sess.run(optimizer, feed_dict={X:batch_xs, Y:batch_ys});
-		avg_cost += sess.run(cost, feed_dict={X:batch_xs, Y:batch_ys});
-
-	if epoch % EPOCH_DISPLAY ==0 :
-		print ("Epoch:", "%04d" % (epoch+1), "cost=", "{:.9f}".format(avg_cost));
-
-print("optimization Finished")
-
-is_correct = tf.equal(tf.argmax(hypothesis,1), tf.argmax(Y,1));
-accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32));
-print('Accuracy : ', sess.run(accuracy,feed_dict={X:data_sets.test.images,Y:data_sets.test.labels}));
-
-'''------------------------------------------------------------------'''
-'''
-#import keras
-#from keras.models import Sequential
-#from keras import backend as K
-from tensorflow.python import keras
-from keras.models import Sequential
-
-model = Sequential();
-model.add(Dense(1000,activation='relu'));
-model.add(Dense(10,activation='softmax'));
-
-model.compile(loss=keras.losses.categorical_crossentropy, optimizer = keras.optimizers.Adadelta(), metrics=['accuracy']);
-model.fit(datasets.train.images,datasets.train.labels, batch_size=BATCH_SIE, epochs=EPOCH, verbose=1, validation_data=(datasets.validation.images.datasets.validation.labels));
-score = model.evaluate(datasets.test.images,datasets.test.labels, verbose=0);
-print('Test loss:', score[0]);
-print('test accuracy:',score[1]);
-
-'''
-'''------------------------------------------------------------------'''
-
-W1_arr = W1.eval(sess);
-B1_arr = B1.eval(sess);
-W2_arr = W2.eval(sess);
-B2_arr = B2.eval(sess);
-
-#with open(os.path.join(SAVE_PATH, 'MNIST.ckpt')) as f:
-saver.save(sess,os.path.join(SAVE_PATH,"./MNIST.ckpt"));
-
-#tup_ob = {'a' : 3, 'b': 5};
-#list_ob = ['string', 1023, 103.4];
-save_tuple = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
-
-#from sklearn.externals import joblib 
-import pickle
-#joblib.dump([W1,B1,W2,B2],os.path.join(SAVE_PATH, 'MNIST.pkl'));
-#pickle.dump(W1,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
-#pickle.dump(B1,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
-#pickle.dump(W2,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
-#pickle.dump(B2,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
-
-#os.getcwd()
-with open(os.path.join(SAVE_PATH, 'MNIST.pkl'), 'wb') as f:
-	pickle.dump(save_tuple, f);
-
-
-'''------------------------------------------------------------------'''
-
-
+if __name__=='__main__':
+	tf.app.run()
