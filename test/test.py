@@ -1,12 +1,12 @@
 import os
 import sys
-from sklearn.datasets import make_blobs
-from sklearn.cluster import KMeans
 import joblib
 import tensorflow as tf
+import numpy as np
 
 sys.path.append('..')
 from pretrain import train as pretrain
+from kmeans import kmeans_cluster
 
 MNIST_PATH='../data/MNIST'
 VALIDATION_SIZE = 5000
@@ -64,6 +64,7 @@ def _variable_with_weight_decay(name, shape, wd, initializer, trainable=True):
     weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
     tf.add_to_collection('losses', weight_decay)
   return var
+
 class DataSets(object):
 	pass
 data_sets = DataSets();
@@ -140,7 +141,9 @@ with tf.variable_scope(layer_name) as scope:
 		print("param is {}".format(use_pretrained_param)) #True
 		if use_pretrained_param:
 			try:
-				kernel_val = np.transpose(kernel_val, (1,0))
+				#kernel_val = np.transpose(kernel_val, (1,0))
+				print("kernelval is {}".format(kernel_val.shape)) 
+				print("dim, hidden is {},{}".format(dim,hiddens)) 
 				assert kernel_val.shape == (dim, hiddens), \
 					'kernel shape error at {}'.format(layer_name)
 			except:
@@ -149,8 +152,12 @@ with tf.variable_scope(layer_name) as scope:
 					'use randomly initialized parameter'.format(layer_name))
 
 	if use_pretrained_param:
-		kmeans = KMeans(n_clusters=30)
-
+		#tk
+		kmeans = kmeans_cluster(kernel_val, max_iter=2)
+		print("Kmeans label is", kmeans.label())
+		print("Kmeans cluster_centers is", kmeans.centro())
+			
+			
 		kernel_init = tf.constant(kernel_val, dtype=tf.float32)
 		bias_init = tf.constant(bias_val, dtype=tf.float32)
 	elif xavier:

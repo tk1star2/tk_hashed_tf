@@ -2,7 +2,6 @@
 
 """Train"""
 
-from ..pretrain import train as pretrain
 import hashed
 import config
 import os
@@ -10,6 +9,10 @@ import os
 import tensorflow as tf
 import threading
 import time
+
+sys.path.append('..')
+from pretrain import train as pretrain
+
 '''
 from __future__ import absolute_import
 from __future__ import division
@@ -50,6 +53,29 @@ tf.app.flags.DEFINE_string('pretrained_model_path', '',
 tf.app.flags.DEFINE_string('gpu', '0', """gpu id.""")
 
 #---------------------------------------------------------------------------------
+def predataset():
+	train_images = pretrain.MNIST_download(MNIST_PATH, 'train', 'images');
+	train_labels = pretrain.MNIST_download(MNIST_PATH, 'train', 'labels');
+	test_images =  pretrain.MNIST_download(MNIST_PATH, 'test', 'images');
+	test_labels =  pretrain.MNIST_download(MNIST_PATH, 'test', 'labels');
+
+	validation_images = train_images[:VALIDATION_SIZE];
+	validation_labels = train_labels[:VALIDATION_SIZE];
+	train_images = train_images[VALIDATION_SIZE:];
+	train_labels = train_labels[VALIDATION_SIZE:];
+
+	#print('train-labels is ', train_labels);
+
+	class DataSets(object):
+		pass
+	data_sets = DataSets();
+	data_sets.test =  pretrain.DataSet(test_images, test_labels, dtype=tf.float32, one_hot=True);
+	data_sets.train =  pretrain.DataSet(train_images, train_labels, dtype=tf.float32, one_hot=True);
+	data_sets.validation =  pretrain.DataSet(validation_images, validation_labels, dtype=tf.float32, one_hot=True);
+
+	return data_sets
+	#print('datasets train is ', data_sets.train);
+
 def train():
   """Train SqueezeDet model"""
   assert FLAGS.dataset == 'MNIST', \
@@ -71,29 +97,9 @@ def train():
       #mc.IS_TRAINING = True
       #mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
       #model = ResNet50ConvDet(mc)
-	#----------------------
-	train_images = pretrain.MNIST_download(MNIST_PATH, 'train', 'images');
-	train_labels = pretrain.MNIST_download(MNIST_PATH, 'train', 'labels');
-	test_images =  pretrain.MNIST_download(MNIST_PATH, 'test', 'images');
-	test_labels =  pretrain.MNIST_download(MNIST_PATH, 'test', 'labels');
 
-	validation_images = train_images[:VALIDATION_SIZE];
-	validation_labels = train_labels[:VALIDATION_SIZE];
-	train_images = train_images[VALIDATION_SIZE:];
-	train_labels = train_labels[VALIDATION_SIZE:];
+	data_sets = predataset()
 
-	print('train-labels is ', train_labels);
-
-	#data_sets = DataSet([],[],fake_data=True, one_hot=True, dtype=tf.float32);
-	class DataSets(object):
-		pass
-	data_sets = DataSets();
-	data_sets.test =  pretrain.DataSet(test_images, test_labels, dtype=tf.float32, one_hot=True);
-	data_sets.train =  pretrain.DataSet(train_images, train_labels, dtype=tf.float32, one_hot=True);
-	data_sets.validation =  pretrain.DataSet(validation_images, validation_labels, dtype=tf.float32, one_hot=True);
-
-	print('datasets train is ', data_sets.train);
-	#----------------------
     def _load_data(load_to_placeholder=True):
       # read batch input
       image_per_batch, label_per_batch, box_delta_per_batch, aidx_per_batch, \
@@ -178,8 +184,7 @@ def train():
 
     summary_writer = tf.summary.FileWriter(FLAGS.train_dir, sess.graph)
 
-    init = tf.global_variables_initializer()
-    sess.run(init)
+    sess.run(tf.global_variables_initializer())
 
     coord = tf.train.Coordinator()
 
@@ -213,6 +218,7 @@ def train():
             model.det_probs, model.det_class, model.conf_loss,
             model.bbox_loss, model.class_loss
         ]
+		# sess.run
         _, loss_value, summary_str, det_boxes, det_probs, det_class, \
             conf_loss, bbox_loss, class_loss = sess.run(
                 op_list, feed_dict=feed_dict)
@@ -232,10 +238,12 @@ def train():
             format(conf_loss, bbox_loss, class_loss))
       else:
         if mc.NUM_THREAD > 0:
+		  # sess.run
           _, loss_value, conf_loss, bbox_loss, class_loss = sess.run(
               [model.train_op, model.loss, model.conf_loss, model.bbox_loss,
                model.class_loss], options=run_options)
         else:
+		  # sess.run
           feed_dict, _, _, _ = _load_data(load_to_placeholder=False)
           _, loss_value, conf_loss, bbox_loss, class_loss = sess.run(
               [model.train_op, model.loss, model.conf_loss, model.bbox_loss,

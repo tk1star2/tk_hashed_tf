@@ -15,9 +15,8 @@ import tensorflow as tf
 from nn_skeleton import ModelSkeleton
 '''
 import os
-from sklearn.datasets import make_blobs
-from sklearn.cluster import KMeans
 import joblib
+from kmeans import kmeans_cluster
 
 def _variable_on_device(name, shape, initializer, trainable=True):
   """Helper to create a Variable.
@@ -61,21 +60,59 @@ def _variable_with_weight_decay(name, shape, wd, initializer, trainable=True):
 
 class hashed(ModelSkeleton):
   def __init__(self, mc, gpu_id=0):
-    with tf.device('/gpu:{}'.format(gpu_id)):
     #with tf.device('/cpu:0'):
-	  self.mc = mc
-      #ModelSkeleton.__init__(self, mc)
+    with tf.device('/gpu:{}'.format(gpu_id)):
+		self.mc = mc
+		# a scalar tensor in range (0, 1]. Usually set to 0.5 in training phase and
+    	# 1.0 in evaluation phase
+		self.keep_prob = 0.5 if mc.IS_TRAINING else 1.0
 
-      self._add_forward_graph()
-      print("debug1.................................................add_forward__graph : end")
-      self._add_interpretation_graph()
-      print("debug2..........................................add_interpretation_graph : end")
-      self._add_loss_graph()
-      print("debug3.................................................add_loas_graph : end")
-      self._add_train_graph()
-      print("debug4...............................................add_train_graph : end")
-      self._add_viz_graph()
-      print("debug5...............................................add_viz_graph : end")
+		# image batch input
+		self.ph_image_input = tf.placeholder(
+			tf.float32, [mc.BATCH_SIZE, mc.IMAGE_HEIGHT, mc.IMAGE_WIDTH, 3],
+			name='image_input'
+		)
+		
+		# A tensor where an element is 1 if the corresponding box is "responsible"
+		# for detection an object and 0 otherwise.
+		self.ph_input_mask = tf.placeholder(
+			tf.float32, [mc.BATCH_SIZE, mc.ANCHORS, 1], name='box_mask')
+		# Tensor used to represent bounding box deltas.
+		self.ph_box_delta_input = tf.placeholder(
+			tf.float32, [mc.BATCH_SIZE, mc.ANCHORS, 4], name='box_delta_input')
+		# Tensor used to represent bounding box coordinates.
+		self.ph_box_input = tf.placeholder(
+			tf.float32, [mc.BATCH_SIZE, mc.ANCHORS, 4], name='box_input')
+		# Tensor used to represent labels
+		self.ph_labels = tf.placeholder(
+			tf.float32, [mc.BATCH_SIZE, mc.ANCHORS, mc.CLASSES], name='labels')
+
+		# IOU between predicted anchors with ground-truth boxes
+		self.ious = tf.Variable(
+			initial_value=np.zeros((mc.BATCH_SIZE, mc.ANCHORS)), trainable=False,
+			name='iou', dtype=tf.float32
+		)
+
+		self.FIFOQueue = tf.FIFOQueue(
+			capacity=mc.QUEUE_CAPACITY,
+			dtypes=[tf.float32, tf.float32],
+			shapes=[[mc.IMAGE_HEIGHT, mc.IMAGE_WIDTH, 3],[mc.CLASSES]]
+		)
+		self.enqueue_op = self.FIFOQueue.enqueue_many(
+			[self.ph_image_input, self.ph_input_mask,
+			self.ph_box_delta_input, self.ph_box_input, self.ph_labels]
+		)
+		self.image_input, self.input_mask, self.box_delta_input, \
+			self.box_input, self.labels = tf.train.batch(
+				self.FIFOQueue.dequeue(), batch_size=mc.BATCH_SIZE,
+				capacity=mc.QUEUE_CAPACITY) 
+
+		self._add_forward_graph()
+		print("debug1.................................................add_forward__graph : end")
+		self._add_loss_graph()
+		print("debug2.................................................add_loas_graph : end")
+		self._add_train_graph()
+		print("debug3...............................................add_train_graph : end")
 
   def _add_forward_graph(self):
     """NN architecture."""
@@ -109,35 +146,12 @@ class hashed(ModelSkeleton):
           tf.reduce_sum(
               (self.labels*(-tf.log(self.pred_class_probs+mc.EPSILON))
                + (1-self.labels)*(-tf.log(1-self.pred_class_probs+mc.EPSILON)))
-              * self.input_mask * mc.LOSS_COEF_CLASS),
+              * mc.LOSS_COEF_CLASS),
           self.num_objects,
           name='class_loss'
       )
       tf.add_to_collection('losses', self.class_loss)
-
-    with tf.variable_scope('confidence_score_regression') as scope: #22222
-      input_mask = tf.reshape(self.input_mask, [mc.BATCH_SIZE, mc.ANCHORS])
-      self.conf_loss = tf.reduce_mean(
-          tf.reduce_sum(
-              tf.square((self.ious - self.pred_conf)) 
-              * (input_mask*mc.LOSS_COEF_CONF_POS/self.num_objects
-                 +(1-input_mask)*mc.LOSS_COEF_CONF_NEG/(mc.ANCHORS-self.num_objects)),
-              reduction_indices=[1]
-          ),
-          name='confidence_loss'
-      )
-      tf.add_to_collection('losses', self.conf_loss)
-      tf.summary.scalar('mean iou', tf.reduce_sum(self.ious)/self.num_objects)
-
-    with tf.variable_scope('bounding_box_regression') as scope: #33333
-      self.bbox_loss = tf.truediv(
-          tf.reduce_sum(
-              mc.LOSS_COEF_BBOX * tf.square(
-                  self.input_mask*(self.pred_box_delta-self.box_delta_input))),
-          self.num_objects,
-          name='bbox_loss'
-      )
-      tf.add_to_collection('losses', self.bbox_loss)
+	  #tk : box_input, labels
 
     # add above losses as well as weight decay losses to form the total loss
     self.loss = tf.add_n(tf.get_collection('losses'), name='total_loss')
@@ -156,7 +170,7 @@ class hashed(ModelSkeleton):
 
     tf.summary.scalar('learning_rate', lr)
 
-    _add_loss_summaries(self.loss)
+    #_add_loss_summaries(self.loss)
 
     opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=mc.MOMENTUM)
     grads_vars = opt.compute_gradients(self.loss, tf.trainable_variables())
@@ -165,6 +179,7 @@ class hashed(ModelSkeleton):
       for i, (grad, var) in enumerate(grads_vars):
 		grads_vars[i] = (tf.clip_by_norm(grad, mc.MAX_GRAD_NORM), var)
         #grads_vars[i] = (lambda grad: 0 if grad is None	else tf.clip_by_norm(grad, mc.MAX_GRAD_NORM), var)
+	# apply grad_vars
     apply_gradient_op = opt.apply_gradients(grads_vars, global_step=self.global_step)
 
     for var in tf.trainable_variables():
@@ -186,7 +201,7 @@ class hashed(ModelSkeleton):
 	return output_value;
 
   def _hashed_layer(
-      self, layer_name, inputs, hiddens, flatten=False, relu=True,
+      self, layer_name, inputs, hiddens, centroid_num=30, flatten=False, relu=True,
       xavier=False, stddev=0.001, hashed = True):
     """Fully connected layer operation constructor.
 
@@ -255,35 +270,28 @@ class hashed(ModelSkeleton):
                    'use randomly initialized parameter'.format(layer_name))
 
       if use_pretrained_param:
-		kmeans = KMeans(n_clusters=30)
-		kmeans.fit(kernel_val)
-		
+		kmeans = kmeans_cluster(kernel_val, max_iter = 1000)	
 
-        kernel_init = tf.constant(kernel_val, dtype=tf.float32)
+        label_init = tf.constant(kmeans.label(), dtype=tf.int32)
+		centroid_init = tf.constant(kmeans.centro(), dtype=tf.float32)
         bias_init = tf.constant(bias_val, dtype=tf.float32)
-      elif xavier:
-        kernel_init = tf.contrib.layers.xavier_initializer()
-        bias_init = tf.constant_initializer(0.0)
+		#real_weights = centroids[weights]
       else:
-        kernel_init = tf.truncated_normal_initializer(stddev=stddev, dtype=tf.float32)
+        label_init = tf.truncated_normal_initializer(stddev=stddev, dtype=tf.int32)
+        centroid_init = tf.truncated_normal_initializer(stddev=stddev, dtype=tf.float32)
         bias_init = tf.constant_initializer(0.0)
 	  
-      weights = _variable_with_weight_decay(
-          'weights', shape=[dim, hiddens], wd=mc.WEIGHT_DECAY,
-          initializer=kernel_init)
+      centroids = _variable_with_weight_decay(
+          'centroids', shape=[centroid_num], wd=mc.WEIGHT_DECAY,
+          initializer=centroid_init)
+      labels = _variable_on_device('labels', shape=[dim, hiddens], initializer=label_init)
       biases = _variable_on_device('biases', [hiddens], bias_init)
-      self.model_params += [weights, biases]
+      self.model_params += [centroids, labels, biases]
   
-	  if hashed:
-      	outputs = tf.nn.bias_add(tf.matmul(inputs, weights), biases)
-      	if relu:
-        	outputs = tf.nn.relu(outputs, 'relu')
-      else:
-	  	outputs = tf.nn.bias_add(tf.matmul(inputs, weights), biases)
-      	if relu:
-        	outputs = tf.nn.relu(outputs, 'relu')
+      outputs = tf.nn.bias_add(tf.matmul(inputs, centroids[labels]), biases)
+      if relu:
+       	outputs = tf.nn.relu(outputs, 'relu')
 	  #!!!!!!finished!!!!!!!!!!!!!!!! kernel is fixed
-	  #------
 
       # count layer stats
       self.model_size_counter.append((layer_name, (dim+1)*hiddens))
@@ -383,8 +391,6 @@ class hashed(ModelSkeleton):
       outputs = tf.nn.bias_add(tf.matmul(inputs, weights), biases)
       if relu:
         outputs = tf.nn.relu(outputs, 'relu')
-	  #!!!!!!finished!!!!!!!!!!!!!!!! kernel is fixed
-	  #------
 
       # count layer stats
       self.model_size_counter.append((layer_name, (dim+1)*hiddens))
