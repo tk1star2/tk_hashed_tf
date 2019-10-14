@@ -6,7 +6,7 @@ export TRAIN_DIR="./MNIST"
 
 if [ $# -eq 0 ]
 then
-  echo "Usage: ./scripts/train.sh [options]"
+  echo "Usage: ./train.sh [options]"
   echo " "
   echo "options:"
   echo "-h, --help                show brief help"
@@ -19,7 +19,7 @@ fi
 while test $# -gt 0; do
   case "$1" in
     -h|--help)
-      echo "Usage: ./scripts/train.sh [options]"
+      echo "Usage: ./train.sh [options]"
       echo " "
       echo "options:"
       echo "-h, --help                show brief help"
@@ -63,7 +63,7 @@ case "$NET" in
 esac
 
 
-python train.py \
+python3 train.py \
   --dataset=MNIST \
   --image_set=train \
   --summary_step=10 \

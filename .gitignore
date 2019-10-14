@@ -1,3 +1,6 @@
 pretrain/.train.py.swp
 pretrain/MNIST/*
 pretrain/__pycache__/*
+test/__pycache__/*
+train/__pycache__/*
+*.pyc
