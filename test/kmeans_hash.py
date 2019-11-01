@@ -82,10 +82,15 @@ class kmeans_hash_cluster(object):
 
 		self.cCentro = self.cCentro / centroid_sum
 
-	def weight(self):
+	def real_weight(self):
 		return self.cWeights
-	def label(self):
-		return self.cLabel
+	def weight(self):
+		return self.cCentro[self.cLabel]
+	def label(self, flatten=False):
+		if flatten :
+			return self.cLabel.flatten()
+		else :
+			return self.cLabel
 	def centro(self):
 		return self.cCentro
 	def num_centro(self):

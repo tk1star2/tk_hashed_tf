@@ -91,7 +91,7 @@ caffemodel_weight = joblib.load("../pretrain/MNIST/MNIST.pkl")
 use_pretrained_param = False
 
 cw = caffemodel_weight
-layer_name = "W1"
+layer_name = "dense1"
 flatten = False
 xavier = False
 stddev = 0.001
@@ -101,8 +101,8 @@ print("tk: what is layer name is {}".format(layer_name))
 if layer_name in cw:
 	print("tk: what is layer name is {}".format(layer_name))
 	use_pretrained_param = True
-	kernel_val = cw[layer_name]
-	bias_val = cw[layer_name]
+	kernel_val = cw[layer_name][0]
+	bias_val = cw[layer_name][1]
 	print("how about this {}".format(kernel_val))
 	print("how about this {}".format(kernel_val.shape[0])) #784
 	print("how about this {}".format(kernel_val.shape[1])) #1000
@@ -158,9 +158,9 @@ with tf.variable_scope(layer_name) as scope:
 		kmeans = kmeans_hash_cluster(kernel_val)
 		print("Kmeans label is", kmeans.label())
 		print("Kmeans cluster_centers is", kmeans.centro())
+		print("Kmeans weight is", kmeans.weight())
 			
-			
-		kernel_init = tf.constant(kernel_val, dtype=tf.float32)
+		kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
 		bias_init = tf.constant(bias_val, dtype=tf.float32)
 	elif xavier:
 		kernel_init = tf.contrib.layers.xavier_initializer()

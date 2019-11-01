@@ -42,7 +42,7 @@ def base_model_config(dataset='MNIST'):
 
   # Pixel mean values (BGR order) as a (1, 1, 3) array. Below is the BGR mean
   # of VGG16
-  cfg.BGR_MEANS = np.array([[[103.939, 116.779, 123.68]]])
+  #cfg.BGR_MEANS = np.array([[[103.939, 116.779, 123.68]]])
 
   # loss coefficient for confidence regression
   cfg.LOSS_COEF_CONF = 1.0
@@ -59,8 +59,8 @@ def base_model_config(dataset='MNIST'):
   # multiply the learning rate by this factor
   cfg.LR_DECAY_FACTOR = 0.1
 
-  # learning rate
-  cfg.LEARNING_RATE = 0.001
+  # learning rate :0.001
+  cfg.LEARNING_RATE = 0.0005
 
   # momentum
   cfg.MOMENTUM = 0.9

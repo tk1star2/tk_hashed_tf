@@ -4,3 +4,4 @@ pretrain/__pycache__/*
 test/__pycache__/*
 train/__pycache__/*
 *.pyc
+*.swp

@@ -139,7 +139,8 @@ def train():
 	train_images = train_images[VALIDATION_SIZE:];
 	train_labels = train_labels[VALIDATION_SIZE:];
 
-	print('train-labels is ', train_labels);
+	print("train_images size is {}".format(train_images[0].shape))
+	#print('train-labels is ', train_labels);
 
 	#data_sets = DataSet([],[],fake_data=True, one_hot=True, dtype=tf.float32);
 	class DataSets(object):
@@ -149,13 +150,13 @@ def train():
 	data_sets.train = DataSet(train_images, train_labels, dtype=tf.float32, one_hot=True);
 	data_sets.validation = DataSet(validation_images, validation_labels, dtype=tf.float32, one_hot=True);
 
-	print('datasets train is ', data_sets.train);
+	#print('datasets train is ', data_sets.train);
 
 	'''------------------------------------------------------------------'''
 
 	BATCH_SIZE = 100;
 	TOTAL_BATCH = int();
-	EPOCH =1000;
+	EPOCH =2;#1000
 	EPOCH_DISPLAY = 10;
 	LEARNING_RATE = 0.001;
 	
@@ -197,6 +198,7 @@ def train():
 
 		for i in range(total_batch):
 			batch_xs, batch_ys = data_sets.train.next_batch(BATCH_SIZE);
+			#print("batch size is {},{}", batch_xs.shape, batch_ys.shape)
 			#print("****size of batch xs is ", batch_xs.shape, "batch ys is ", batch_ys.shape);
 			sess.run(optimizer, feed_dict={X:batch_xs, Y:batch_ys});
 			avg_cost += sess.run(cost, feed_dict={X:batch_xs, Y:batch_ys});
@@ -241,7 +243,8 @@ def train():
 
 	#tup_ob = {'a' : 3, 'b': 5};
 	#list_ob = ['string', 1023, 103.4];
-	save_tuple = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
+	#save_tuple = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
+	save_tuple = {'dense1' : [W1_arr,B1_arr], 'dense2' : [W2_arr, B2_arr]};
 
 	#from sklearn.externals import joblib 
 	import pickle

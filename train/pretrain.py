@@ -30,8 +30,8 @@ class DataSet(object):
       # Convert shape from [num examples, rows, columns, depth]
       # to [num examples, rows*columns] (assuming depth == 1)
       assert images.shape[3] == 1
-      images = images.reshape(images.shape[0],
-                              images.shape[1] * images.shape[2])
+      #images = images.reshape(images.shape[0],images.shape[1] * images.shape[2])
+      #images = images.reshape(images.shape[0],images.shape[1] , images.shape[2])#tk
       if dtype == tf.float32:
         # Convert from [0, 255] -> [0.0, 1.0].
         images = images.astype(numpy.float32)
