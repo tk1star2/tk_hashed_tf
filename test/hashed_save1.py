@@ -17,9 +17,9 @@ import os
 import joblib
 import sys
 import numpy as np
-sys.path.append('../test/')
 #from kmeans import kmeans_cluster
-from XXhash import XXhash
+sys.path.append('../test/')
+from kmeans_hash import kmeans_hash_cluster
 
 def _variable_on_device(name, shape, initializer, trainable=True):
   """Helper to create a Variable.
@@ -124,15 +124,14 @@ class hashed():
 		if mc.LOAD_PRETRAINED_MODEL:
 			assert tf.gfile.Exists(mc.PRETRAINED_MODEL_PATH), 'Cannot find pretrained model at the given path:' '  {}'.format(mc.PRETRAINED_MODEL_PATH)
 		self.caffemodel_weight = joblib.load(mc.PRETRAINED_MODEL_PATH)
-		#save_tuple = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
+	#save_tuple = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
 
-		dense1 = self._hashed_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=9800)
-		#dense1 = self._fc_layer('dense1', self.image_input, hiddens=1000, flatten=True)
+		#dense1 = self._hashed_layer('dense1', self.image_input, hiddens=1000, flatten=True)
+		dense1 = self._fc_layer('dense1', self.image_input, hiddens=1000, flatten=True)
 
-		#dense2 = self._hashed_layer('dense2', dense1, hiddens=10, flatten=False, relu=False)
-		self.preds = self._hashed_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=125)
+		#dense2 = self._hashed_layer('dense2', dense1, hiddens=10, flatten=False)
 		#dense2 = self._fc_layer('dense2', dense1, hiddens=10, flatten=False)
-		#self.preds = self._fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False)
+		self.preds = self._fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False)
 
 		#preds :(100, 10)
 		#print("tk :preds is this {}".format(self.preds))
@@ -157,15 +156,9 @@ class hashed():
 		# tk:accumulate
 		self.loss = tf.add_n(tf.get_collection('losses'), name='total_loss')
 		'''
-		with tf.variable_scope('class_regression') as scope:  #11111
-			self.class_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.preds, labels=self.labels))
-			tf.add_to_collection('losses', self.class_loss)
-					
-
-		self.loss = tf.add_n(tf.get_collection('losses'), name='total_loss');
-		#self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.preds, labels=self.labels))
+		self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.preds, labels=self.labels))
 	# ***************************************step3****************************
-	
+	'''
 	def _add_hash_train_graph(self):
 		#Define the training operation.
 		mc = self.mc
@@ -181,86 +174,56 @@ class hashed():
 
 		#_add_loss_summaries(self.loss)
 
-		#1.trainable variables---------------
+		#grads_vars
+		#tf.Tensor, control_dependency : (784,1000)
 		#tf.Variable, dense1/weights:0 : (784,1000)
+
+		#tf.Tensor, control_dependency : (1000, )
 		#tf.Variable, dense1/biases:0  : (1000, )
+
+		#tf.Tensor, control_dependency : (1000,10)
 		#tf.Variable, dense2/weights:0 : (1000,10)
+
+		#tf.Tensor, control_dependency : (10, )
 		#tf.Variable, dense2/biases:0  : (10, )
 
-		#2.grads_vars-------------------------
-		#tf.Tensor, control_dependency : (784,1000) grad
-		#tf.Variable, dense1/weights:0 : (784,1000) vars
-
-		#tf.Tensor, control_dependency : (1000, ) grad
-		#tf.Variable, dense1/biases:0  : (1000, ) vars
-
-		#tf.Tensor, control_dependency : (1000,10) grad
-		#tf.Variable, dense2/weights:0 : (1000,10) vars
-
-		#tf.Tensor, control_dependency : (10, ) grad
-		#tf.Variable, dense2/biases:0  : (10, ) vars
-
-		#Momentum + learning decay + weight decay
 		opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=mc.MOMENTUM)
 		grads_vars = opt.compute_gradients(self.loss, tf.trainable_variables())
 
-		#TO_DO : Tensorflow TENSOR!!!!
-		#temp_centroid = np.zeros(self.hash_num)
-		#temp_centroid_num = np.zeros(self.hash_num)
-		temp_centroid_list = [];
-		temp_centroid_num_list = [];
-
-		print("grad_vars size is ", tf.size(grads_vars[i]))
+		print("-------------------------------------tk:hash : classloss:{}---------------------------------------".format(grads_vars))
+		temp_centroid = np.zeros(self.hash_num)
+		temp_centroid_num = np.zeros(self.hash_num)
+		
 		with tf.variable_scope('clip_gradient') as scope:
-			#tk!! JUST like STEP2
 			for i, (grad, var) in enumerate(grads_vars):
-				temp_centroid = tf.Variable(tf.zeros([self.hash_num], tf.float32))
-				temp_centroid_num = tf.Variable(tf.zeros([self.hash_num], tf.int32))
-				print("{} trainable variable is !!!grad: {}".format(i, grad))
-				print("{} trainable variable is !!!var: {}".format(i, var))
-				#temp_centroid[self.hash_index[i]] += tf.clip_by_norm(grad, mc.MAX_GRAD_NORM)
-				#temp_centroid_num[self.hash_index[i]] += 1
-				length = tf.size(grad);
-				for i2 in xrange(length):
-					tf.add(temp_centroid[self.hash_index[i2]], tf.clip_by_norm(grad[i2], mc.MAX_GRAD_NORM));
-					tf.add(temp_centroid_num[self.hash_index[i2]],1);
-				temp_centroid_list.append(temp_centroid);
-				temp_centroid_num_list.append(temp_centroid_num);
+				temp_centroid[self.hash_index[i]] += tf.clip_by_norm(grad, mc.MAX_GRAD_NORM)
+				temp_centroid_num[self.hash_index[i]] += 1
 
-			#for i in range(self.hash_num):
-			#	temp_centroid[i] /= temp_centroid_num[i];
-			print("trainable variable is !!!temp: {}".format(temp_centroid))
-			for i, (grad, var) in enumerate(grads_vars):
-				temp_centroid = tf.div(temp_centroid_list[i], tf.cast(temp_centroid_num_list[i],tf.float32));
-			print("trainable variable is !!!temp: {}".format(temp_centroid))
+			temp_centroid /= temp_centroid_num
 
-			#tk!! JUST like STEP3
-			#grads_vars = temp_centroid[self.hash_index];
 			for i, (grad, var) in enumerate(grads_vars):
-				length = tf.size(grad);
-				for i2 in xrange(length):
-					grads_vars[i][i2] = (temp_centroid_list[i][self.hash_index[i]], var)
-				grads_vars[i] = (temp_centroid_list[i], var)
+				grads_vars[i] = (temp_centroid[self.hash_index[i]], var)
 
 		# apply grad_vars
 		apply_gradient_op = opt.apply_gradients(grads_vars, global_step=self.global_step)
 
 		for var in tf.trainable_variables():
 			tf.summary.histogram(var.op.name, var)
+
 		for grad, var in grads_vars:
 			if grad is not None:
 				tf.summary.histogram(var.op.name + '/gradients', grad)
 
 		with tf.control_dependencies([apply_gradient_op]):
 			self.train_op = tf.no_op(name='train')
-	
+	'''
 	#original
 	def _add_train_graph(self):
 		"""Define the training operation."""
 		mc = self.mc
 
 
-		
+		'''
 		self.global_step = tf.Variable(0, name='global_step', trainable=False)
 		lr = tf.train.exponential_decay(mc.LEARNING_RATE,
                                     self.global_step,
@@ -295,15 +258,13 @@ class hashed():
 		opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=mc.MOMENTUM)
 		grads_vars = opt.compute_gradients(self.loss, tf.trainable_variables())
 		#print("-------------------------------------tk:classloss:{}---------------------------------------".format(grads_vars))
-	
-		print("grad_vars size is ", grads_vars[0][0])
-			
+		
 		with tf.variable_scope('clip_gradient') as scope:
 			for i, (grad, var) in enumerate(grads_vars):
 				print("{} trainable variable is !!!var: {}".format(i, grad))
 				print("{} trainable variable is !!!var: {}".format(i, var))
 				grads_vars[i] = (tf.clip_by_norm(grad, mc.MAX_GRAD_NORM), var)
-				#print("{} trainable variable is !!!var: {}".format(i, grads_vars[i]))
+				print("{} trainable variable is !!!var: {}".format(i, grads_vars[i]))
 				#grads_vars[i] = (lambda grad: 0 if grad is None	else tf.clip_by_norm(grad, mc.MAX_GRAD_NORM), var)
 		
 
@@ -316,8 +277,8 @@ class hashed():
 		for grad, var in grads_vars:
 			if grad is not None:
 				tf.summary.histogram(var.op.name + '/gradients', grad)
-		
-		#apply_gradient_op = tf.train.AdamOptimizer(0.001).minimize(self.loss);
+		'''
+		apply_gradient_op = tf.train.AdamOptimizer(0.001).minimize(self.loss);
 
 		with tf.control_dependencies([apply_gradient_op]):
 			self.train_op = tf.no_op(name='train')
@@ -390,36 +351,22 @@ class hashed():
 						use_pretrained_param = False
 						print ('Shape of the pretrained parameter of {} does not match, ' 'use randomly initialized parameter'.format(layer_name))
 
-			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num)
-			#self.hash_index = tf.convert_to_tensor(kmeans.label(flatten=True),dtype=tf.int32);
-			#self.hash_num = tf.convert_to_tensor(kmeans.num_centro(), dtype=tf.int32);
-			#self.hash_index = kmeans.label(flatten=True);
-			self.hash_index = kmeans.label();
-			self.hash_num = kmeans.num_centro();
+			kmeans = kmeans_hash_cluster(kernel_val)	
+			self.hash_index = kmeans.label(flatten=True)
+			self.hash_num = kmeans.num_centro()
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
-
 			if use_pretrained_param:
-				#kernel_init = tf.constant(kernel_val, dtype=tf.float32)
-				#bias_init = tf.constant(bias_val, dtype=tf.float32)
-				print("1.TKTKTKTK:::::::", kernel_val)
-				print("2.TKTKTKTK:::::::", kmeans.weight())
-				#kernel_init = tf.truncated_normal_initializer(stddev=stddev, dtype=tf.float32)
-				#bias_init = tf.constant_initializer(0.0)
 				kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
 				bias_init = tf.constant(bias_val, dtype=tf.float32)
 			else:
-				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
-				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
-				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
-				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
 				kernel_init = tf.truncated_normal_initializer(stddev=stddev, dtype=tf.float32)
 				bias_init = tf.constant_initializer(0.0)
 	  
 			#print("tk: dim is {}, hiddens is {}".format(dim, hiddens))
 
-			#tk : MAKE TENSOR!!!!
-			weights = _variable_with_weight_decay('weights', shape=[dim, hiddens], initializer=kernel_init, wd=mc.WEIGHT_DECAY)
-			#weights = _variable_on_device('weights', shape=[dim, hiddens], initializer=kernel_init)
+			weights = _variable_with_weight_decay(
+				'weights', shape=[dim, hiddens], wd=mc.WEIGHT_DECAY,
+				initializer=kernel_init)
 			biases = _variable_on_device('biases', [hiddens], bias_init)
 			self.model_params += [weights, biases]
   

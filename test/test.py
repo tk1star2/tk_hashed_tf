@@ -6,8 +6,8 @@ import numpy as np
 
 sys.path.append('..')
 from pretrain import train as pretrain
-#from kmeans import kmeans_cluster
-from kmeans_hash import kmeans_hash_cluster
+from kmeans import kmeans_cluster
+#from kmeans_hash import kmeans_hash_cluster
 
 MNIST_PATH='../data/MNIST'
 VALIDATION_SIZE = 5000
@@ -79,7 +79,7 @@ print('***datasets train is ', b.shape[0]);#100 Batchsize
 print('***datasets train is ', b.shape[1]);#10 output
 inputs_np, _ = data_sets.train.next_batch(1)
 inputs = tf.convert_to_tensor(inputs_np, tf.float32)
-#----------------------
+#------------------------------------------------------------------------
 
 
 # pre-define model
@@ -154,8 +154,8 @@ with tf.variable_scope(layer_name) as scope:
 
 	if use_pretrained_param:
 		#tk
-		#kmeans = kmeans_cluster(kernel_val, max_iter=2)
-		kmeans = kmeans_hash_cluster(kernel_val)
+		kmeans = kmeans_cluster(kernel_val, max_iter=2)
+		#kmeans = kmeans_hash_cluster(kernel_val)
 		print("Kmeans label is", kmeans.label())
 		print("Kmeans cluster_centers is", kmeans.centro())
 		print("Kmeans weight is", kmeans.weight())

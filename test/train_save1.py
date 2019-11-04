@@ -35,7 +35,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('dataset', 'MNIST', """Currently only support MNIST? dataset.""")
 tf.app.flags.DEFINE_string('image_set', 'train',
                            """ Can be train, trainval, val, or test""")
-tf.app.flags.DEFINE_integer('max_steps', 1000000,
+tf.app.flags.DEFINE_integer('max_steps', 100000,
                             """Maximum number of batches to run.""")
 tf.app.flags.DEFINE_integer('summary_step', 10,
                             """Number of steps to save summary.""")
@@ -140,7 +140,7 @@ def train():
 			is_correct = tf.equal(tf.argmax(model.preds,1), tf.argmax(labels,1));
 			accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32));
 			sum_accuracy = 0
-			for i in range(int(data_sets.test.images.shape[0]/100)):
+			for i in range(int(10000/100)):
 				feed_dict = {
 					image_input:data_sets.test.images[100*(i):100*(i+1)],
 					labels:data_sets.test.labels[100*(i):100*(i+1)]
@@ -150,7 +150,7 @@ def train():
 			# 10000, 28, 28, 1
 			#print("dataset format is {},{},{},{}".format(data_sets.test.images.shape[0],data_sets.test.images.shape[1],data_sets.test.images.shape[2],data_sets.test.images.shape[3]))
 			#print("label format is {},{},{},{}".format(data_sets.test.labels.shape[0],data_sets.test.images.shape[1],data_sets.test.images.shape[2],data_sets.test.images.shape[3]))
-			print('Accuracy : ', sum_accuracy/(data_sets.test.images.shape[0]/100));
+			print('Accuracy : ', sum_accuracy/(10000/100));
 		#-----------------------------------------------------------------
 
 		#lets go
@@ -197,13 +197,46 @@ def train():
 			start_time = time.time()
 
 			#**********************main*******************************
-			if mc.NUM_THREAD > 0: #4
+			if step % FLAGS.summary_step == 0: #10
+				'''
+				feed_dict, image_per_batch, label_per_batch =_load_data(load_to_placeholder=False)
+				#tk:op_list = [model.train_op, model.loss, summary_op, model.class_loss]
+				op_list = [model.train_op, model.loss, summary_op]
+
 				# sess.run
-				#tk:_, loss_value, class_loss = sess.run([model.train_op, model.loss, model.class_loss], options=run_options)
-				_, loss_value = sess.run([model.train_op, model.loss], options=run_options)
-				#_, loss_value = sess.run([model.train_op, model.loss])
-				if step % 10 == 0:
-					print("-----------what is loss : {}".format(loss_value)) # session value
+				#tk:_, loss_value, summary_str, class_loss = sess.run(op_list, feed_dict=feed_dict)
+				_, loss_value, summary_str = sess.run(op_list, feed_dict=feed_dict)
+
+				summary_writer.add_summary(summary_str, step)
+				summary_writer.flush()
+				'''
+				#_, loss_value = sess.run([model.train_op, model.loss], options=run_options)
+				_, loss_value = sess.run([model.train_op, model.loss])
+				#print("-----------what is loss : {}".format(model.loss)) # Tensor
+				print("-----------what is loss : {}".format(loss_value)) # session value
+				'''
+				#print!!! value	
+				with tf.variable_scope('clip_gradient') as scope:
+					#return all variables 
+					for i, (var) in enumerate(tf.trainable_variables()):		
+						#print("trainable variables is !!!", grad)
+						print("{} {} : trainable variables is !!! {}".format(i, var.name, var.eval(sess)))
+				'''	
+
+
+				#tk:print ('class_loss: {}'.format(class_loss))
+			else:
+				if mc.NUM_THREAD > 0: #4
+					# sess.run
+					#tk:_, loss_value, class_loss = sess.run([model.train_op, model.loss, model.class_loss], options=run_options)
+					#_, loss_value = sess.run([model.train_op, model.loss], options=run_options)
+					_, loss_value = sess.run([model.train_op, model.loss])
+					#print("-----------what is loss : {}".format(loss_value)) # session value
+				else:
+					# sess.run
+					feed_dict, _, _= _load_data(load_to_placeholder=False)
+					#tk:_, loss_value, class_loss = sess.run([model.train_op, model.loss, model.class_loss], feed_dict=feed_dict)
+					_, loss_value = sess.run([model.train_op, model.loss], feed_dict=feed_dict)
 			#*********************************************************
 
 			duration = time.time() - start_time

@@ -40,33 +40,22 @@ def base_model_config(dataset='MNIST'):
   # batch size
   cfg.BATCH_SIZE = 100
 
-  # Pixel mean values (BGR order) as a (1, 1, 3) array. Below is the BGR mean
-  # of VGG16
-  #cfg.BGR_MEANS = np.array([[[103.939, 116.779, 123.68]]])
-
-  # loss coefficient for confidence regression
-  cfg.LOSS_COEF_CONF = 1.0
-
-  # loss coefficient for classification regression
-  cfg.LOSS_COEF_CLASS = 1.0
-
-  # loss coefficient for bounding box regression
-  cfg.LOSS_COEF_BBOX = 10.0
-                           
-  # reduce step size after this many steps
-  cfg.DECAY_STEPS = 10000
-
   # multiply the learning rate by this factor
   cfg.LR_DECAY_FACTOR = 0.1
+  # reduce step size after this many steps
+  #cfg.DECAY_STEPS = 10000
+  cfg.DECAY_STEPS = 1000 #tk (DECAY,LR) = (1000, 0.1), (1000, 0.01)
 
   # learning rate :0.001
-  cfg.LEARNING_RATE = 0.0005
+  #cfg.LEARNING_RATE = 0.0005
+  cfg.LEARNING_RATE = 0.1 #tk
 
   # momentum
   cfg.MOMENTUM = 0.9
 
   # weight decay
-  cfg.WEIGHT_DECAY = 0.0005
+  #cfg.WEIGHT_DECAY = 0.0005
+  cfg.WEIGHT_DECAY = 0.001 #tk
 
   # wether to load pre-trained model
   cfg.LOAD_PRETRAINED_MODEL = True
@@ -86,22 +75,14 @@ def base_model_config(dataset='MNIST'):
   # Whether to do data augmentation
   cfg.DATA_AUGMENTATION = False
 
-  # The range to randomly shift the image widht
-  cfg.DRIFT_X = 0
-
-  # The range to randomly shift the image height
-  cfg.DRIFT_Y = 0
-
-  # Whether to exclude images harder than hard-category. Only useful for KITTI
-  # dataset.
-  cfg.EXCLUDE_HARD_EXAMPLES = True
-
   # small value used in batch normalization to prevent dividing by 0. The
   # default value here is the same with caffe's default value.
   cfg.BATCH_NORM_EPSILON = 1e-5
 
   # number of threads to fetch data
-  cfg.NUM_THREAD = 4
+  # cfg.NUM_THREAD = 4 #error : DONT KNOWì WHY
+  # tk: maybe because of (input stream)
+  cfg.NUM_THREAD = 1
 
   # capacity for FIFOQueue
   cfg.QUEUE_CAPACITY = 100

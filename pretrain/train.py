@@ -62,6 +62,8 @@ class DataSet(object):
         fake_label = 0
       return [fake_image for _ in xrange(batch_size)], [
           fake_label for _ in xrange(batch_size)]
+
+    #-----------------------------------------------------
     start = self._index_in_epoch
     self._index_in_epoch += batch_size
     if self._index_in_epoch > self._num_examples:
@@ -156,7 +158,7 @@ def train():
 
 	BATCH_SIZE = 100;
 	TOTAL_BATCH = int();
-	EPOCH =2;#1000
+	EPOCH =100;
 	EPOCH_DISPLAY = 10;
 	LEARNING_RATE = 0.001;
 	
@@ -174,8 +176,10 @@ def train():
 	B2 = tf.Variable(tf.zeros([10]));
 
 	#model
-	act1 = tf.nn.relu(tf.matmul(X,W1)+B1);
-	act2 = tf.matmul(act1,W2)+B2;
+	#act1 = tf.nn.relu(tf.matmul(X,W1)+B1);
+	act1 = tf.nn.relu(tf.nn.bias_add(tf.matmul(X,W1),B1));
+	#act2 = tf.matmul(act1,W2)+B2;
+	act2 = tf.nn.bias_add(tf.matmul(act1,W2),B2);
 	hypothesis = act2;
 	#hypothesis=tf.nn.softmax(act2);
 
@@ -237,6 +241,12 @@ def train():
 	B1_arr = B1.eval(sess);
 	W2_arr = W2.eval(sess);
 	B2_arr = B2.eval(sess);
+
+	print("W1_arr {} is {}".format(W1_arr.shape, W1_arr))
+	print("B1_arr {} is {}".format(B1_arr.shape, B1_arr))
+	print("W2_arr {} is {}".format(W2_arr.shape, W2_arr))
+	print("B2_arr {} is {}".format(B2_arr.shape, B2_arr))
+
 
 	#with open(os.path.join(SAVE_PATH, 'MNIST.ckpt')) as f:
 	saver.save(sess,os.path.join(SAVE_PATH,"./MNIST.ckpt"));
