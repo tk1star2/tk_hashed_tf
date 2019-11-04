@@ -102,14 +102,18 @@ class hashed():
 			# activation counter
 			self.activation_counter = [] # array of tuple of layer name, output activations
 			self.activation_counter.append(('input', mc.IMAGE_WIDTH*mc.IMAGE_HEIGHT*1))
+			#---------------------------------------------------------------------------
+			self.hash_index = {};
+			self.hash_num = {};
+	
 
 			#make Tensor
 			self._add_forward_graph()
 			print("debug1.................................................add_forward__graph : end")
 			self._add_loss_graph()
 			print("debug2.................................................add_loas_graph : end")
-			self._add_train_graph()
-			#self._add_hash_train_graph()
+			#self._add_train_graph()
+			self._add_hash_train_graph()
 			print("debug3...............................................add_train_graph : end")
 
 	# ***************************************step1****************************
@@ -166,6 +170,7 @@ class hashed():
 		#self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.preds, labels=self.labels))
 	# ***************************************step3****************************
 	
+
 	def _add_hash_train_graph(self):
 		#Define the training operation.
 		mc = self.mc
@@ -179,80 +184,40 @@ class hashed():
 
 		tf.summary.scalar('learning_rate', lr)
 
-		#_add_loss_summaries(self.loss)
-
-		#1.trainable variables---------------
-		#tf.Variable, dense1/weights:0 : (784,1000)
-		#tf.Variable, dense1/biases:0  : (1000, )
-		#tf.Variable, dense2/weights:0 : (1000,10)
-		#tf.Variable, dense2/biases:0  : (10, )
-
-		#2.grads_vars-------------------------
-		#tf.Tensor, control_dependency : (784,1000) grad
-		#tf.Variable, dense1/weights:0 : (784,1000) vars
-
-		#tf.Tensor, control_dependency : (1000, ) grad
-		#tf.Variable, dense1/biases:0  : (1000, ) vars
-
-		#tf.Tensor, control_dependency : (1000,10) grad
-		#tf.Variable, dense2/weights:0 : (1000,10) vars
-
-		#tf.Tensor, control_dependency : (10, ) grad
-		#tf.Variable, dense2/biases:0  : (10, ) vars
-
 		#Momentum + learning decay + weight decay
 		opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=mc.MOMENTUM)
-		grads_vars = opt.compute_gradients(self.loss, tf.trainable_variables())
+		self.grads_vars = opt.compute_gradients(self.loss, tf.trainable_variables())
 
-		#TO_DO : Tensorflow TENSOR!!!!
-		#temp_centroid = np.zeros(self.hash_num)
-		#temp_centroid_num = np.zeros(self.hash_num)
-		temp_centroid_list = [];
-		temp_centroid_num_list = [];
 
-		print("grad_vars size is ", tf.size(grads_vars[i]))
 		with tf.variable_scope('clip_gradient') as scope:
-			#tk!! JUST like STEP2
-			for i, (grad, var) in enumerate(grads_vars):
-				temp_centroid = tf.Variable(tf.zeros([self.hash_num], tf.float32))
-				temp_centroid_num = tf.Variable(tf.zeros([self.hash_num], tf.int32))
+			print("tk:grads_vars is ", self.grads_vars)
+			for i, (grad, var) in enumerate(self.grads_vars):
 				print("{} trainable variable is !!!grad: {}".format(i, grad))
 				print("{} trainable variable is !!!var: {}".format(i, var))
-				#temp_centroid[self.hash_index[i]] += tf.clip_by_norm(grad, mc.MAX_GRAD_NORM)
-				#temp_centroid_num[self.hash_index[i]] += 1
-				length = tf.size(grad);
-				for i2 in xrange(length):
-					tf.add(temp_centroid[self.hash_index[i2]], tf.clip_by_norm(grad[i2], mc.MAX_GRAD_NORM));
-					tf.add(temp_centroid_num[self.hash_index[i2]],1);
-				temp_centroid_list.append(temp_centroid);
-				temp_centroid_num_list.append(temp_centroid_num);
+				self.grads_vars[i] = (tf.clip_by_norm(grad, mc.MAX_GRAD_NORM), var)
+		
+			#SETTING
+			self.grads_placeholder = [(tf.placeholder("float", shape=var.get_shape()),var) for (grad, var) in self.grads_vars]
 
-			#for i in range(self.hash_num):
-			#	temp_centroid[i] /= temp_centroid_num[i];
-			print("trainable variable is !!!temp: {}".format(temp_centroid))
-			for i, (grad, var) in enumerate(grads_vars):
-				temp_centroid = tf.div(temp_centroid_list[i], tf.cast(temp_centroid_num_list[i],tf.float32));
-			print("trainable variable is !!!temp: {}".format(temp_centroid))
+		#with tf.control_dependencies([grads_vars]):
+		#	self.train_op1 = tf.no_op(name='train1')
 
-			#tk!! JUST like STEP3
-			#grads_vars = temp_centroid[self.hash_index];
-			for i, (grad, var) in enumerate(grads_vars):
-				length = tf.size(grad);
-				for i2 in xrange(length):
-					grads_vars[i][i2] = (temp_centroid_list[i][self.hash_index[i]], var)
-				grads_vars[i] = (temp_centroid_list[i], var)
+		#----------------------------------------------------------
+
+		# modify grad_vars
+		apply_gradient_op = opt.apply_gradients(self.grads_placeholder, global_step=self.global_step)
 
 		# apply grad_vars
-		apply_gradient_op = opt.apply_gradients(grads_vars, global_step=self.global_step)
+		#apply_gradient_op = opt.apply_gradients(grads_vars, global_step=self.global_step)
 
 		for var in tf.trainable_variables():
 			tf.summary.histogram(var.op.name, var)
-		for grad, var in grads_vars:
+		for grad, var in self.grads_vars:
 			if grad is not None:
 				tf.summary.histogram(var.op.name + '/gradients', grad)
 
 		with tf.control_dependencies([apply_gradient_op]):
-			self.train_op = tf.no_op(name='train')
+			self.train_op2 = tf.no_op(name='train2')
 	
 	#original
 	def _add_train_graph(self):
@@ -391,11 +356,10 @@ class hashed():
 						print ('Shape of the pretrained parameter of {} does not match, ' 'use randomly initialized parameter'.format(layer_name))
 
 			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num)
-			#self.hash_index = tf.convert_to_tensor(kmeans.label(flatten=True),dtype=tf.int32);
-			#self.hash_num = tf.convert_to_tensor(kmeans.num_centro(), dtype=tf.int32);
-			#self.hash_index = kmeans.label(flatten=True);
-			self.hash_index = kmeans.label();
-			self.hash_num = kmeans.num_centro();
+			self.hash_index[layer_name] = kmeans.label();
+			print("!!!!!!!!!!!!!!!!!!", layer_name, "!!!!!!!!!!!!!!!!!");
+			print("!!!!!!!!!!!!!!!!!!", layer_name+'/weights:0', "!!!!!!!!!!!!!!!!!");
+			self.hash_num[layer_name] = kmeans.num_centro();
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
 
 			if use_pretrained_param:

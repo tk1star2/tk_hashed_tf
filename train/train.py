@@ -96,6 +96,39 @@ def train():
 		data_sets = predataset()
 
 		#-----------------------------------------------------------------
+		def TK_TRANSFORM(grad, val):
+			#print("**********************************************************");	
+			#print("grad is ", grad);
+			if grad.ndim != 2 :
+				#print("**********************************************************");	
+				return grad;
+			
+			#print("**********************************************************");	
+
+			
+			if str(val.name.split('/')[0]) in model.hash_num.keys():
+				hash_num = model.hash_num[val.name.split('/')[0]];
+				hash_index = model.hash_index[val.name.split('/')[0]];
+			else:
+				print("ERROR");
+				return grad;
+
+			temp_centroid = np.zeros(hash_num)
+			temp_centroid_num = np.zeros(hash_num)
+
+			#tk!! JUST like STEP2
+			for i in xrange(grad.shape[0]):
+				for i2 in xrange(grad.shape[1]):
+					temp_centroid[hash_index[i][i2]] += grad[i][i2];
+					temp_centroid_num[hash_index[i][i2]] += 1;
+
+			for i in xrange(hash_num):
+				if temp_centroid[i] != 0:
+					temp_centroid[i] /= temp_centroid_num[i];
+
+			#tk!! JUST like STEP3
+			return temp_centroid[hash_index];
+		#-----------------------------------------------------------------
 		def _load_data(load_to_placeholder=True):
 			"""Read a batch of image and bounding box annotations.
 			Args:
@@ -199,9 +232,17 @@ def train():
 			#**********************main*******************************
 			if mc.NUM_THREAD > 0: #4
 				# sess.run
-				#tk:_, loss_value, class_loss = sess.run([model.train_op, model.loss, model.class_loss], options=run_options)
-				_, loss_value = sess.run([model.train_op, model.loss], options=run_options)
-				#_, loss_value = sess.run([model.train_op, model.loss])
+				#_, loss_value = sess.run([model.train_op, model.loss], options=run_options)
+				
+				loss_value = sess.run(model.loss, options=run_options)
+				grads = sess.run([grad for (grad,var) in model.grads_vars ], options=run_options)
+
+				feed_dict = {}
+				for i in xrange(len(model.grads_placeholder)):
+					feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], model.grads_placeholder[i][1]);
+
+				sess.run(model.train_op2, feed_dict=feed_dict ,options=run_options)
+
 				if step % 10 == 0:
 					print("-----------what is loss : {}".format(loss_value)) # session value
 			#*********************************************************
@@ -216,8 +257,7 @@ def train():
 				images_per_sec = num_images_per_step / duration
 				sec_per_batch = float(duration)
 				format_str = ('%s: step %d, loss = %.2f (%.1f images/sec; %.3f ' 'sec/batch)')
-				print (format_str % (datetime.now(), step, loss_value,
-       	                      images_per_sec, sec_per_batch))
+				print (format_str % (datetime.now(), step, loss_value, images_per_sec, sec_per_batch))
 				sys.stdout.flush()
 
 			# Save the model checkpoint periodically. # 50
