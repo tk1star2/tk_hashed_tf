@@ -65,7 +65,7 @@ def _variable_with_weight_decay(name, shape, initializer, wd, trainable=True):
   return var
 
 class hashed():
-	def __init__(self, mc, gpu_id=0):
+	def __init__(self, mc, gpu_id=0, hashed=True):
 		#with tf.device('/cpu:0'):
 		with tf.device('/gpu:{}'.format(gpu_id)):
 			self.mc = mc
@@ -111,12 +111,23 @@ class hashed():
 			self._add_forward_graph()
 			print("debug1.................................................add_forward__graph : end")
 			self._add_loss_graph()
-			print("debug2.................................................add_loas_graph : end")
-			#self._add_train_graph()
-			self._add_hash_train_graph()
+			print("debug2.................................................add_loss_graph : end")
+			if hashed:
+				self._add_hash_train_graph()
+			else
+				self._add_train_graph()
 			print("debug3...............................................add_train_graph : end")
 
 	# ***************************************step1****************************
+	#-------------------STEP1. cost function for loss---------------------------------
+		#save_dict = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
+
+		#dense1 = self._fc_layer('dense1', self.image_input, hiddens=1000, flatten=True)
+		#self.preds = self._fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False)
+
+		#dense2 = self._fc_layer('dense2', dense1, hiddens=10, flatten=False)
+		#self.preds = tf.nn.dropout(dense2, self.keep_prob, name='drop3')
+	#---------------------------------------------------------------------------------
 	def _add_forward_graph(self):
 		"""NN architecture."""
 
@@ -128,26 +139,17 @@ class hashed():
 		if mc.LOAD_PRETRAINED_MODEL:
 			assert tf.gfile.Exists(mc.PRETRAINED_MODEL_PATH), 'Cannot find pretrained model at the given path:' '  {}'.format(mc.PRETRAINED_MODEL_PATH)
 		self.caffemodel_weight = joblib.load(mc.PRETRAINED_MODEL_PATH)
-		#save_tuple = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
 
-		dense1 = self._hashed_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=9800)
-		#dense1 = self._fc_layer('dense1', self.image_input, hiddens=1000, flatten=True)
+		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=98000)
 
-		#dense2 = self._hashed_layer('dense2', dense1, hiddens=10, flatten=False, relu=False)
-		self.preds = self._hashed_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=125)
-		#dense2 = self._fc_layer('dense2', dense1, hiddens=10, flatten=False)
-		#self.preds = self._fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False)
+		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=1250)
 
 		#preds :(100, 10)
 		#print("tk :preds is this {}".format(self.preds))
 
-		#self.preds = tf.nn.dropout(dense2, self.keep_prob, name='drop3')
 
 	# ***************************************step2****************************
-	#-----------------------------------cost function for loss---------------------------------
-	def _add_loss_graph(self):
-		"""Define the loss operation."""
-		mc = self.mc
+	#-------------------STEP2. cost function for loss---------------------------------
 		'''
 		with tf.variable_scope('class_regression') as scope:  #11111
 			# cross-entropy: q * -log(p) + (1-q) * -log(1-p)
@@ -161,6 +163,11 @@ class hashed():
 		# tk:accumulate
 		self.loss = tf.add_n(tf.get_collection('losses'), name='total_loss')
 		'''
+	#---------------------------------------------------------------------------------
+	def _add_loss_graph(self):
+		"""Define the loss operation."""
+		mc = self.mc
+
 		with tf.variable_scope('class_regression') as scope:  #11111
 			self.class_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.preds, labels=self.labels))
 			tf.add_to_collection('losses', self.class_loss)
@@ -168,7 +175,33 @@ class hashed():
 
 		self.loss = tf.add_n(tf.get_collection('losses'), name='total_loss');
 		#self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.preds, labels=self.labels))
+
 	# ***************************************step3****************************
+	#-------------------STEP3. train mapping for loss---------------------------------
+		#_add_loss_summaries(self.loss)
+
+		#1.trainable variables---------------
+		#tf.Variable, dense1/weights:0 : (784,1000)
+		#tf.Variable, dense1/biases:0  : (1000, )
+		#tf.Variable, dense2/weights:0 : (1000,10)
+		#tf.Variable, dense2/biases:0  : (10, )
+
+		#2.grads_vars-------------------------
+		#tf.Tensor, control_dependency : (784,1000) grad
+		#tf.Variable, dense1/weights:0 : (784,1000) vars
+
+		#tf.Tensor, control_dependency : (1000, ) grad
+		#tf.Variable, dense1/biases:0  : (1000, ) vars
+
+		#tf.Tensor, control_dependency : (1000,10) grad
+		#tf.Variable, dense2/weights:0 : (1000,10) vars
+
+		#tf.Tensor, control_dependency : (10, ) grad
+		#tf.Variable, dense2/biases:0  : (10, ) vars
+
+		# apply grad_vars
+		#apply_gradient_op = opt.apply_gradients(grads_vars, global_step=self.global_step)
+	#---------------------------------------------------------------------------------
 	
 
 	def _add_hash_train_graph(self):
@@ -176,11 +209,8 @@ class hashed():
 		mc = self.mc
 
 		self.global_step = tf.Variable(0, name='global_step', trainable=False)
-		lr = tf.train.exponential_decay(mc.LEARNING_RATE,
-                                    self.global_step,
-                                    mc.DECAY_STEPS,
-                                    mc.LR_DECAY_FACTOR,
-                                    staircase=True)
+		# decayed_learning_rate = learning_rate * decay_rate ^ (global_step / decay_steps)
+		lr = tf.train.exponential_decay(mc.LEARNING_RATE,self.global_step,mc.DECAY_STEPS,mc.LR_DECAY_FACTOR, staircase=True)
 
 		tf.summary.scalar('learning_rate', lr)
 
@@ -207,8 +237,6 @@ class hashed():
 		# modify grad_vars
 		apply_gradient_op = opt.apply_gradients(self.grads_placeholder, global_step=self.global_step)
 
-		# apply grad_vars
-		#apply_gradient_op = opt.apply_gradients(grads_vars, global_step=self.global_step)
 
 		for var in tf.trainable_variables():
 			tf.summary.histogram(var.op.name, var)
@@ -227,34 +255,11 @@ class hashed():
 
 		
 		self.global_step = tf.Variable(0, name='global_step', trainable=False)
-		lr = tf.train.exponential_decay(mc.LEARNING_RATE,
-                                    self.global_step,
-                                    mc.DECAY_STEPS,
-                                    mc.LR_DECAY_FACTOR,
-                                    staircase=True)
+		# decayed_learning_rate = learning_rate * decay_rate ^ (global_step / decay_steps)
+		lr = tf.train.exponential_decay(mc.LEARNING_RATE,self.global_step,mc.DECAY_STEPS,mc.LR_DECAY_FACTOR, staircase=True)
 
 		tf.summary.scalar('learning_rate', lr)
 
-		#_add_loss_summaries(self.loss)
-
-		#1.trainable variables---------------
-		#tf.Variable, dense1/weights:0 : (784,1000)
-		#tf.Variable, dense1/biases:0  : (1000, )
-		#tf.Variable, dense2/weights:0 : (1000,10)
-		#tf.Variable, dense2/biases:0  : (10, )
-
-		#2.grads_vars-------------------------
-		#tf.Tensor, control_dependency : (784,1000) grad
-		#tf.Variable, dense1/weights:0 : (784,1000) vars
-
-		#tf.Tensor, control_dependency : (1000, ) grad
-		#tf.Variable, dense1/biases:0  : (1000, ) vars
-
-		#tf.Tensor, control_dependency : (1000,10) grad
-		#tf.Variable, dense2/weights:0 : (1000,10) vars
-
-		#tf.Tensor, control_dependency : (10, ) grad
-		#tf.Variable, dense2/biases:0  : (10, ) vars
 
 		
 		opt = tf.train.MomentumOptimizer(learning_rate=lr, momentum=mc.MOMENTUM)
@@ -287,11 +292,11 @@ class hashed():
 		with tf.control_dependencies([apply_gradient_op]):
 			self.train_op = tf.no_op(name='train')
 
-	#---------------------------------------------------------------------------
+
+
 	#-------------------------------layer_start----------------------------------
-	def _hashed_layer(
-      self, layer_name, inputs, hiddens, centroid_num=30, flatten=False, relu=True,
-      xavier=False, stddev=0.001, hashed = True):
+	#---------------------------------------------------------------------------
+		# HASH-FCLayer
 		"""Fully connected layer operation constructor.
 		Args:
 			layer_name: layer name.
@@ -307,6 +312,10 @@ class hashed():
 		Returns:
 			A fully connected layer operation.
 		"""
+	#---------------------------------------------------------------------------
+	def _hashed_fc_layer(
+      self, layer_name, inputs, hiddens, centroid_num=30, flatten=False, relu=True,
+      xavier=False, stddev=0.001, hashed = True):
 		mc = self.mc
 
 		use_pretrained_param = False
@@ -325,7 +334,7 @@ class hashed():
 				inputs = tf.reshape(inputs, [-1, dim])
 				if use_pretrained_param:
 					try:
-						# check the size before layout transfhiddens-1000, dim 784
+						# check the size before layout transf hiddens-1000, dim 784
 						assert kernel_val.shape == (hiddens, dim), 'kernel shape error at {}'.format(layer_name)
 						kernel_val = np.reshape(
 							np.transpose(
@@ -350,6 +359,7 @@ class hashed():
 				if use_pretrained_param:
 					try:
 						kernel_val = np.transpose(kernel_val, (1,0))
+						# check the size before layout transf dim 784, hiddens-1000
 						assert kernel_val.shape == (dim, hiddens), 'kernel shape error at {}'.format(layer_name)
 					except:
 						use_pretrained_param = False
@@ -357,20 +367,17 @@ class hashed():
 
 			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num)
 			self.hash_index[layer_name] = kmeans.label();
-			print("!!!!!!!!!!!!!!!!!!", layer_name, "!!!!!!!!!!!!!!!!!");
-			print("!!!!!!!!!!!!!!!!!!", layer_name+'/weights:0', "!!!!!!!!!!!!!!!!!");
 			self.hash_num[layer_name] = kmeans.num_centro();
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
 
 			if use_pretrained_param:
-				#kernel_init = tf.constant(kernel_val, dtype=tf.float32)
-				#bias_init = tf.constant(bias_val, dtype=tf.float32)
 				print("1.TKTKTKTK:::::::", kernel_val)
 				print("2.TKTKTKTK:::::::", kmeans.weight())
-				#kernel_init = tf.truncated_normal_initializer(stddev=stddev, dtype=tf.float32)
-				#bias_init = tf.constant_initializer(0.0)
 				kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
 				bias_init = tf.constant(bias_val, dtype=tf.float32)
+			elif xavier:
+				kernel_init = tf.contrib.layers.xavier_initializer()
+				bias_init = tf.constant_initializer(0.0)
 			else:
 				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
 				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
@@ -407,9 +414,7 @@ class hashed():
 			return outputs
 
 	#---------------------------------------------------------------------------
-	def _fc_layer(
-      self, layer_name, inputs, hiddens, flatten=False, relu=True,
-      xavier=False, stddev=0.001):
+		# FC layer
 		"""Fully connected layer operation constructor.
 		Args:
 			layer_name: layer name.
@@ -425,6 +430,10 @@ class hashed():
 		Returns:
 			A fully connected layer operation.
 		"""
+	#---------------------------------------------------------------------------
+	def _fc_layer(
+      self, layer_name, inputs, hiddens, flatten=False, relu=True,
+      xavier=False, stddev=0.001):
 		mc = self.mc
 
 		use_pretrained_param = False
@@ -518,3 +527,202 @@ class hashed():
 
 			return outputs
 
+
+	#---------------------------------------------------------------------------
+	# hashed CONV layer
+	"""Convolutional layer operation constructor.
+		Args:
+			layer_name: layer name.
+			inputs: input tensor
+			filters: number of output filters.
+			size: kernel size.
+			stride: stride
+			padding: 'SAME' or 'VALID'. See tensorflow doc for detailed description.
+			freeze: if true, then do not train the parameters in this layer.
+			xavier: whether to use xavier weight initializer or not.
+			relu: whether to use relu or not.
+			stddev: standard deviation used for random weight initializer.
+		Returns:
+			A convolutional layer operation.
+	"""
+
+	#---------------------------------------------------------------------------
+	def _hashed_conv_layer(
+		self, layer_name, inputs, filters, size, stride, padding='SAME', hashed=True,
+		freeze=False, xavier=False, relu=True, stddev=0.001, centroid_num=32):
+
+		mc = self.mc
+		use_pretrained_param = False
+		if mc.LOAD_PRETRAINED_MODEL:
+			cw = self.caffemodel_weight
+			if layer_name in cw:
+				kernel_val = np.transpose(cw[layer_name][0], [2,3,1,0])
+				bias_val = cw[layer_name][1]
+				# check the shape
+				if (kernel_val.shape == (size, size, inputs.get_shape().as_list()[-1], filters)) \
+					and (bias_val.shape == (filters, )):
+					use_pretrained_param = True
+				else:
+					print ('Shape of the pretrained parameter of {} does not match, '
+						'use randomly initialized parameter'.format(layer_name))
+			else:
+				print ('Cannot find {} in the pretrained model. Use randomly initialized '
+					'parameters'.format(layer_name))
+
+		if mc.DEBUG_MODE:
+			print('Input tensor shape to {}: {}'.format(layer_name, inputs.get_shape()))
+
+		with tf.variable_scope(layer_name) as scope:
+			channels = inputs.get_shape()[3]
+
+			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num)
+			self.hash_index[layer_name] = kmeans.label();
+			self.hash_num[layer_name] = kmeans.num_centro();
+			#print("tk: kmeans weight size is ", kmeans.weight().shape)
+
+			#TO_DO :  check dimension
+			if use_pretrained_param:
+				print("1.TKTKTKTK:::::::", kernel_val)
+				print("2.TKTKTKTK:::::::", kmeans.weight())
+				kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
+				bias_init = tf.constant(bias_val, dtype=tf.float32)
+			elif xavier:
+				kernel_init = tf.contrib.layers.xavier_initializer()
+				bias_init = tf.constant_initializer(0.0)
+			else:
+				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
+				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
+				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
+				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
+				kernel_init = tf.truncated_normal_initializer(stddev=stddev, dtype=tf.float32)
+				bias_init = tf.constant_initializer(0.0)
+
+			# re-order the caffe kernel with shape [out, in, h, w] -> tf kernel with
+			# shape [h, w, in, out]
+
+			kernel = _variable_with_weight_decay(
+				'kernels', shape=[size, size, int(channels), filters],
+				wd=mc.WEIGHT_DECAY, initializer=kernel_init, trainable=(not freeze))
+
+			biases = _variable_on_device('biases', [filters], bias_init, trainable=(not freeze))
+			self.model_params += [kernel, biases]
+
+			#-------------------real tensorflow convolution 2d-------------------------------
+			print("inputs?? {}".format(inputs))
+			print("kernel?? {}".format(kernel))
+			conv = tf.nn.conv2d(inputs, kernel, [1, stride, stride, 1], padding=padding, name='convolution')
+			print("conv?? {}".format(conv))
+			#--------------------------------------------------------------------------------
+
+			conv_bias = tf.nn.bias_add(conv, biases, name='bias_add')
+ 
+			if relu:
+				out = tf.nn.relu(conv_bias, 'relu')
+			else:
+				out = conv_bias
+
+			self.model_size_counter.append((layer_name, (1+size*size*int(channels))*filters))
+			out_shape = out.get_shape().as_list()
+			num_flops = (1+2*int(channels)*size*size)*filters*out_shape[1]*out_shape[2]
+
+			if relu:
+				num_flops += 2*filters*out_shape[1]*out_shape[2]
+			self.flop_counter.append((layer_name, num_flops))
+	
+			self.activation_counter.append((layer_name, out_shape[1]*out_shape[2]*out_shape[3]))
+
+			return out
+	#---------------------------------------------------------------------------
+	# CONV layer
+	"""Convolutional layer operation constructor.
+		Args:
+			layer_name: layer name.
+			inputs: input tensor
+			filters: number of output filters.
+			size: kernel size.
+			stride: stride
+			padding: 'SAME' or 'VALID'. See tensorflow doc for detailed description.
+			freeze: if true, then do not train the parameters in this layer.
+			xavier: whether to use xavier weight initializer or not.
+			relu: whether to use relu or not.
+			stddev: standard deviation used for random weight initializer.
+		Returns:
+			A convolutional layer operation.
+	"""
+
+	#---------------------------------------------------------------------------
+	def _conv_layer(
+		self, layer_name, inputs, filters, size, stride, padding='SAME',
+		freeze=False, xavier=False, relu=True, stddev=0.001):
+
+		mc = self.mc
+		use_pretrained_param = False
+		if mc.LOAD_PRETRAINED_MODEL:
+			cw = self.caffemodel_weight
+			if layer_name in cw:
+				kernel_val = np.transpose(cw[layer_name][0], [2,3,1,0])
+				bias_val = cw[layer_name][1]
+				# check the shape
+				if (kernel_val.shape == (size, size, inputs.get_shape().as_list()[-1], filters)) \
+					and (bias_val.shape == (filters, )):
+					use_pretrained_param = True
+				else:
+					print ('Shape of the pretrained parameter of {} does not match, '
+						'use randomly initialized parameter'.format(layer_name))
+			else:
+				print ('Cannot find {} in the pretrained model. Use randomly initialized '
+					'parameters'.format(layer_name))
+
+		if mc.DEBUG_MODE:
+			print('Input tensor shape to {}: {}'.format(layer_name, inputs.get_shape()))
+
+		with tf.variable_scope(layer_name) as scope:
+			channels = inputs.get_shape()[3]
+
+			# re-order the caffe kernel with shape [out, in, h, w] -> tf kernel with
+			# shape [h, w, in, out]
+			if use_pretrained_param:
+				if mc.DEBUG_MODE:
+					print ('Using pretrained model for {}'.format(layer_name))
+				kernel_init = tf.constant(kernel_val , dtype=tf.float32)
+				bias_init = tf.constant(bias_val, dtype=tf.float32)
+			elif xavier:
+				kernel_init = tf.contrib.layers.xavier_initializer_conv2d()
+				bias_init = tf.constant_initializer(0.0)
+			else:
+				kernel_init = tf.truncated_normal_initializer(
+					stddev=stddev, dtype=tf.float32)
+				bias_init = tf.constant_initializer(0.0)
+
+			kernel = _variable_with_weight_decay(
+				'kernels', shape=[size, size, int(channels), filters],
+				wd=mc.WEIGHT_DECAY, initializer=kernel_init, trainable=(not freeze))
+
+			biases = _variable_on_device('biases', [filters], bias_init, trainable=(not freeze))
+			self.model_params += [kernel, biases]
+
+			#-------------------real tensorflow convolution 2d-------------------------------
+			print("inputs?? {}".format(inputs))
+			print("kernel?? {}".format(kernel))
+			conv = tf.nn.conv2d(inputs, kernel, [1, stride, stride, 1], padding=padding, name='convolution')
+			print("conv?? {}".format(conv))
+			#--------------------------------------------------------------------------------
+
+			conv_bias = tf.nn.bias_add(conv, biases, name='bias_add')
+ 
+			if relu:
+				out = tf.nn.relu(conv_bias, 'relu')
+			else:
+				out = conv_bias
+
+			self.model_size_counter.append((layer_name, (1+size*size*int(channels))*filters))
+			out_shape = out.get_shape().as_list()
+			num_flops = (1+2*int(channels)*size*size)*filters*out_shape[1]*out_shape[2]
+
+			if relu:
+				num_flops += 2*filters*out_shape[1]*out_shape[2]
+			self.flop_counter.append((layer_name, num_flops))
+	
+			self.activation_counter.append((layer_name, out_shape[1]*out_shape[2]*out_shape[3]))
+
+			return out

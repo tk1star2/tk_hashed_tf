@@ -66,10 +66,9 @@ esac
 python3 train.py \
   --dataset=MNIST \
   --image_set=train \
-  --max_steps=10000 \
-  --summary_step=10 \
-  --checkpoint_step=50 \
   --train_dir="$TRAIN_DIR/train" \
   --net=$NET \
   --pretrained_model_path=$PRETRAINED_MODEL_PATH \
   --gpu=$GPUID
+  --hashed=True
+

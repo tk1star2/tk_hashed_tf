@@ -17,8 +17,6 @@ from config import base_model_config as config
 from hashed import hashed
 from six.moves import xrange
 
-MNIST_PATH='../data/MNIST'
-VALIDATION_SIZE=5000
 
 '''
 import cv2
@@ -35,12 +33,6 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('dataset', 'MNIST', """Currently only support MNIST? dataset.""")
 tf.app.flags.DEFINE_string('image_set', 'train',
                            """ Can be train, trainval, val, or test""")
-tf.app.flags.DEFINE_integer('max_steps', 1000000,
-                            """Maximum number of batches to run.""")
-tf.app.flags.DEFINE_integer('summary_step', 10,
-                            """Number of steps to save summary.""")
-tf.app.flags.DEFINE_integer('checkpoint_step', 50,
-                            """Number of steps to save summary.""")
 tf.app.flags.DEFINE_string('train_dir', './MNIST/train',
                             """Directory where to write event logs """
                             """and checkpoint.""")
@@ -49,10 +41,14 @@ tf.app.flags.DEFINE_string('net', 'hashedNet',
 tf.app.flags.DEFINE_string('pretrained_model_path', '../pretrain/MNIST/MNIST.pkl',
                            """Path to the pretrained model.""")
 tf.app.flags.DEFINE_string('gpu', '0', """gpu id.""")
+tf.app.flags.DEFINE_string('hashed', 'True', """if it is hashing""")
 
 
 #---------------------------------------------------------------------------------
 def predataset():
+	MNIST_PATH='../data/MNIST'
+	VALIDATION_SIZE=5000
+
 	train_images = pretrain.MNIST_download(MNIST_PATH, 'train', 'images');
 	train_labels = pretrain.MNIST_download(MNIST_PATH, 'train', 'labels');
 	test_images =  pretrain.MNIST_download(MNIST_PATH, 'test', 'images');
@@ -73,8 +69,8 @@ def predataset():
 	data_sets.validation =  pretrain.DataSet(validation_images, validation_labels, dtype=tf.float32, one_hot=True);
 
 	return data_sets
-	#print('datasets train is ', data_sets.train);
 
+#---------------------------------------------------------------------------------
 def train():
 	"""Train SqueezeDet model"""
 	assert FLAGS.dataset == 'MNIST', 'Currently only support MNIST dataset'
@@ -86,7 +82,7 @@ def train():
 			mc = config() # 1.config.py
 			mc.IS_TRAINING = True
 			mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
-			model = hashed(mc) # 2.hashed.py
+			model = hashed(mc, gpu_id=FLAGS.gpu, hashed=FLAGS.hashed) # 2.hashed.py
 		elif FLAGS.net == 'hashed2':
 			mc = config() # 1.config.py
 			mc.IS_TRAINING = True
@@ -96,16 +92,10 @@ def train():
 		data_sets = predataset()
 
 		#-----------------------------------------------------------------
-		def TK_TRANSFORM(grad, val):
-			#print("**********************************************************");	
-			#print("grad is ", grad);
+		def TK_TRANSFORM(grad, val, gpu_id=0):
 			if grad.ndim != 2 :
-				#print("**********************************************************");	
 				return grad;
-			
-			#print("**********************************************************");	
-
-			
+	
 			if str(val.name.split('/')[0]) in model.hash_num.keys():
 				hash_num = model.hash_num[val.name.split('/')[0]];
 				hash_index = model.hash_index[val.name.split('/')[0]];
@@ -123,7 +113,7 @@ def train():
 					temp_centroid_num[hash_index[i][i2]] += 1;
 
 			for i in xrange(hash_num):
-				if temp_centroid[i] != 0:
+				if temp_centroid_num[i] != 0:
 					temp_centroid[i] /= temp_centroid_num[i];
 
 			#tk!! JUST like STEP3
@@ -192,6 +182,8 @@ def train():
 		saver = tf.train.Saver(tf.global_variables())
 		summary_op = tf.summary.merge_all()
 
+		sess.run(tf.global_variables_initializer())
+
 		#restore check_point to session!
 		ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
 		if ckpt and ckpt.model_checkpoint_path:
@@ -200,11 +192,11 @@ def train():
 		summary_writer = tf.summary.FileWriter(FLAGS.train_dir, sess.graph)
 
 		#TO_DO : change to custom initializer
-		sess.run(tf.global_variables_initializer())
+		#sess.run(tf.global_variables_initializer())
 
 		coord = tf.train.Coordinator()
 
-		#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#~~~~~~~~~~~data setting~~~~~~~~~~~~~~~~~~~
 		if mc.NUM_THREAD > 0: #4
 			enq_threads = []
 			for _ in range(mc.NUM_THREAD):
@@ -220,7 +212,7 @@ def train():
 
 		#***************************************************************************
    	 	# goo: 																	   #
-		for step in xrange(FLAGS.max_steps):
+		for step in xrange(mc.MAX_STEP):
 			if coord.should_stop():
 				sess.run(model.FIFOQueue.close(cancel_pending_enqueues=True))
 				coord.request_stop()
@@ -229,30 +221,37 @@ def train():
 
 			start_time = time.time()
 
-			#**********************main*******************************
+			#**********************main function*******************************
 			if mc.NUM_THREAD > 0: #4
-				# sess.run
-				#_, loss_value = sess.run([model.train_op, model.loss], options=run_options)
+				#
+				if FLAGS.hashed : 
+					loss_value = sess.run(model.loss, options=run_options)
+					grads = sess.run([grad for (grad,var) in model.grads_vars ], options=run_options)
+
+					feed_dict = {}
+					for i in xrange(len(model.grads_placeholder)):
+						feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], model.grads_placeholder[i][1]);
+					sess.run(model.train_op2, feed_dict=feed_dict ,options=run_options)
+
+				else : 
+					print("ERRRORORORORORORTK")
+					_, loss_value = sess.run([model.train_op, model.loss], options=run_options)
 				
-				loss_value = sess.run(model.loss, options=run_options)
-				grads = sess.run([grad for (grad,var) in model.grads_vars ], options=run_options)
 
-				feed_dict = {}
-				for i in xrange(len(model.grads_placeholder)):
-					feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], model.grads_placeholder[i][1]);
+			if step % mc.SUMMARY_STEP == 0:
+				feed_dict, _, _ = _load_data(load_to_placeholder=False);
+				summary_str = sess.run(summary_op, feed_dict=feed_dict);
+				print("-----------what is loss : {}".format(loss_value)) # session value
 
-				sess.run(model.train_op2, feed_dict=feed_dict ,options=run_options)
-
-				if step % 10 == 0:
-					print("-----------what is loss : {}".format(loss_value)) # session value
+				summary_writer.add_summary(summary_str, step);
+				summary_writer.flush();
 			#*********************************************************
 
 			duration = time.time() - start_time
 
-			#tk:assert not np.isnan(loss_value), 'Model diverged. Total loss: {}, class_loss: {}'.format(loss_value, class_loss)
 			assert not np.isnan(loss_value), 'Model diverged. Total loss: {}'.format(loss_value)
 
-			if step % 10 == 0:
+			if step % mc.SUMMARY_STEP == 0:
 				num_images_per_step = mc.BATCH_SIZE
 				images_per_sec = num_images_per_step / duration
 				sec_per_batch = float(duration)
@@ -260,14 +259,13 @@ def train():
 				print (format_str % (datetime.now(), step, loss_value, images_per_sec, sec_per_batch))
 				sys.stdout.flush()
 
-			# Save the model checkpoint periodically. # 50
-			if step % FLAGS.checkpoint_step == 0 or (step + 1) == FLAGS.max_steps:
+			# Save the model checkpoint periodically. # 1000
+			if step % mc.CHECKPOINT_STEP == 0 or (step + 1) == mc.MAX_STEP:
 				checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
 				saver.save(sess, checkpoint_path, global_step=step)
 		
 		print("optimization Finished")
 
-		#TO_DO : evaluate function
 		evaluate()
 
 		sess.run(model.FIFOQueue.close(cancel_pending_enqueues=True))
@@ -280,11 +278,18 @@ def train():
 
 #---------------------------------------------------------------------------------
 def main(argv=None):  # pylint: disable=unused-argument
-  if tf.gfile.Exists(FLAGS.train_dir):
-    tf.gfile.DeleteRecursively(FLAGS.train_dir)
-  tf.gfile.MakeDirs(FLAGS.train_dir)
-  train()
-
+	'''
+	if tf.gfile.Exists(FLAGS.train_dir):
+		tf.gfile.DeleteRecursively(FLAGS.train_dir)
+	tf.gfile.MakeDirs(FLAGS.train_dir)
+	train()
+	'''
+	if tf.gfile.Exists(FLAGS.train_dir):
+		train()
+	else:
+		tf.gfile.MakeDirs(FLAGS.train_dir)
+		train()
+ 
 
 if __name__ == '__main__':
   tf.app.run()

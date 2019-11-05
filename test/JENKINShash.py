@@ -14,7 +14,7 @@ from numba import jit
 #nCluster	: # of centroids
 #max_iter	: 1000
 
-def XXhash_real(x, y, nCluster=32):
+def JENKINS_real(x, y, nCluster=32):
 	PRIME32_1 = int('0x9E3779B1', 16)
 	PRIME32_2 = int('0x85EBCA77', 16)
 	PRIME32_3 = int('0xC2B2AE3D', 16)
@@ -52,11 +52,11 @@ def step1(nhWeight, nwWeight):
 
 	for i in range(nhWeight):
 		for i2 in range(nwWeight):
-			cLabel[i][i2] = XXhash_real(i, i2) #0:i, 1:i2
+			cLabel[i][i2] = JENKINS_real(i, i2) #0:i, 1:i2
 
 	return cLabel;
 
-class XXhash(object):
+class JENKINShash(object):
 	def __init__(self, cWeights, nCluster=32):
 		self.nCluster = nCluster
 
@@ -71,7 +71,7 @@ class XXhash(object):
 		#STEP1 : hash index for each 
 		for i in range(self.nhWeight):
 			for i2 in range(self.nwWeight):
-				self.cLabel[i][i2] = XXhash_real(i, i2, self.nCluster) #0:i, 1:i2
+				self.cLabel[i][i2] = JENKINS_real(i, i2, self.nCluster) #0:i, 1:i2
 		#self.cLabel = step1(self.nhWeight, self.nwWeight);
 
 		#STEP2 : get centroid by cLabel
@@ -82,15 +82,15 @@ class XXhash(object):
 				centroid_sum[self.cLabel[i][i2]] += 1
 		
 
-		#print("------------------------------------------------")
-		#print("cCentro is ", self.cCentro);
-		#print("cCentro_sum is ", centroid_sum);
+		print("------------------------------------------------")
+		print("cCentro is ", self.cCentro);
+		print("cCentro_sum is ", centroid_sum);
 		#self.cCentro = self.cCentro / centroid_sum
 		for i in range(self.nCluster):
 			if self.cCentro[i] != 0 :
 				self.cCentro[i] = self.cCentro[i] / centroid_sum[i]
-		#print("cCentro is ", self.cCentro);
-		#print("------------------------------------------------")
+		print("cCentro is ", self.cCentro);
+		print("------------------------------------------------")
 
 		#STEP3 : weight update
 		#for i in range(self.nhWeight):

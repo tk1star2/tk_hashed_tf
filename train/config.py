@@ -37,25 +37,37 @@ def base_model_config(dataset='MNIST'):
   # image height
   cfg.IMAGE_HEIGHT = 28
 
+  #------------------------------------------------------------------
+  	#tk (DECAY,LR) = (1000, 0.1), (1000, 0.01)
+  #------------------------------------------------------------------
   # batch size
-  cfg.BATCH_SIZE = 100
+  cfg.BATCH_SIZE = 100			#original : 20
+
+  # max # of steps for batch
+  cfg.MAX_STEP = 10000 			# original : 100 0000
+
+  # check point step
+  cfg.CHECKPOINT_STEP = 1000	# original : 1000
+
+  # summary step
+  cfg.SUMMARY_STEP = 10			# original : 10
+
+  # reduce step size after this many steps
+  cfg.DECAY_STEPS = 1000		#original : 10000
 
   # multiply the learning rate by this factor
-  cfg.LR_DECAY_FACTOR = 0.1
-  # reduce step size after this many steps
-  #cfg.DECAY_STEPS = 10000
-  cfg.DECAY_STEPS = 1000 #tk (DECAY,LR) = (1000, 0.1), (1000, 0.01)
-
-  # learning rate :0.001
-  #cfg.LEARNING_RATE = 0.0005
-  cfg.LEARNING_RATE = 0.1 #tk
-
-  # momentum
-  cfg.MOMENTUM = 0.9
+  cfg.LR_DECAY_FACTOR = 0.3 	# original : 0.1
 
   # weight decay
-  #cfg.WEIGHT_DECAY = 0.0005
-  cfg.WEIGHT_DECAY = 0.001 #tk
+  cfg.WEIGHT_DECAY = 0.001 #tk	# original : 0.0005
+
+  # learning rate
+  cfg.LEARNING_RATE = 0.1 		# original : 0.005
+
+  # momentum
+  cfg.MOMENTUM = 0.9			# original : 0.9
+
+  #-------------------------------------------------------------------
 
   # wether to load pre-trained model
   cfg.LOAD_PRETRAINED_MODEL = True
