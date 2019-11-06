@@ -45,7 +45,7 @@ def XXhash_real(x, y, nCluster=32):
 	#print(bin(centroid))
 	#print(centroid % nCluster);
 	return centroid % nCluster;
-
+'''
 @jit(nopython=True, cache=True)
 def step1(nhWeight, nwWeight):
 	cLabel = -np.ones((nhWeight, nwWeight), dtype=int)		#nothing
@@ -55,10 +55,78 @@ def step1(nhWeight, nwWeight):
 			cLabel[i][i2] = XXhash_real(i, i2) #0:i, 1:i2
 
 	return cLabel;
+'''
+@jit(nopython=True, cache=True)
+def step1(nhWeight, nwWeight, nCluster, SEED=0):
+	PRIME32_1 = 2654435761
+	PRIME32_2 = 2246822519
+	PRIME32_3 = 3266489917
+	PRIME32_4 = 668265263
+	PRIME32_5 = 374761393
+	#PRIME32_1 = int('0x9E3779B1', 16)
+	#PRIME32_2 = int('0x85EBCA77', 16)
+	#PRIME32_3 = int('0xC2B2AE3D', 16)
+	#PRIME32_4 = int('0x27D4EB2F', 16)
+	#PRIME32_5 = int('0x165667B1', 16)
+	#SEED = int('0x00000000', 16)
+	inputLength = nCluster;
+	cLabel = np.zeros((nhWeight, nwWeight))		#nothing
+
+	for i in range(nhWeight):
+		for i2 in range(nwWeight):
+			acc1 = SEED + PRIME32_1 + PRIME32_2;
+			acc2 = SEED + PRIME32_2;
+			acc3 = SEED;
+			acc4 = SEED - PRIME32_1;
+
+			lane1 = i;
+			lane2 = i+1;
+			lane3 = i2;
+			lane4 = i2+1;
+
+			acc1_w = acc1 + (lane1 * PRIME32_2)
+			acc2_w = acc2 + (lane2 * PRIME32_2)
+			acc3_w = acc3 + (lane3 * PRIME32_2)
+			acc4_w = acc4 + (lane4 * PRIME32_2)
+
+			acc = (acc1_w << 1) + (acc2_w << 7) +(acc3_w << 12) + (acc4_w << 18) + inputLength
+
+			centroid = (( ((acc ^ (acc>>15))*PRIME32_2)^(acc>>13)) * PRIME32_3) ^ (acc>>16)
+
+			cLabel[i][i2] = centroid % nCluster;
+
+	return cLabel;
+
+@jit(nopython=True, cache=True)
+def step2(nhWeight, nwWeight, nCluster):
+	#STEP2 : get centroid by cLabel
+	centroid_sum = np.zeros(self.nCluster, dtype = int)
+	for i in range(self.nhWeight):
+		for i2 in range(self.nwWeight):
+			self.cCentro[self.cLabel[i][i2]] += self.cWeights[i][i2]
+			centroid_sum[self.cLabel[i][i2]] += 1
+	
+	#print("------------------------------------------------")
+	#print("cCentro is ", self.cCentro);
+	#print("cCentro_sum is ", centroid_sum);
+	#self.cCentro = self.cCentro / centroid_sum
+	for i in range(self.nCluster):
+		if self.cCentro[i] != 0 :
+			self.cCentro[i] = self.cCentro[i] / centroid_sum[i]
+	#print("cCentro is ", self.cCentro);
 
 class XXhash(object):
-	def __init__(self, cWeights, nCluster=32):
+	def __init__(self, cWeights, nCluster=32, blocked=False, blocked_param=64, seed=0):
 		self.nCluster = nCluster
+	
+		if blocked :
+			self.nCluster_per_block = int(nCluster/blocked_param);
+			print("ncluster/block is", self.nCluster_per_block);
+			if cWeights.shape[0]%blocked_param == 0 :
+				self.nhWeight_per_block = int(cWeights.shape[0]/blocked_param);
+			else :
+				self.nhWeight_per_block = int(cWeights.shape[0]/blocked_param)+1;
+			print("nhWeight/block is", self.nhWeight_per_block);
 
 		self.nhWeight = cWeights.shape[0]
 		self.nwWeight = cWeights.shape[1]
@@ -69,17 +137,28 @@ class XXhash(object):
 		#self.mask = mask 	#nothing
 
 		#STEP1 : hash index for each 
-		for i in range(self.nhWeight):
-			for i2 in range(self.nwWeight):
-				self.cLabel[i][i2] = XXhash_real(i, i2, self.nCluster) #0:i, 1:i2
-		#self.cLabel = step1(self.nhWeight, self.nwWeight);
+		if blocked :
+			for i in range(self.nhWeight):
+				for i2 in range(self.nwWeight):
+					self.cLabel[i][i2] = XXhash_real(i, i2, self.nCluster_per_block, seed)+int(i/self.nhWeight_per_block)*self.nCluster_per_block;
+					#print("{} cLabel is{}".format(int(i/self.nhWeight_per_block), self.cLabel[i][i2]));
+					
+		else :
+			'''
+			for i in range(self.nhWeight):
+				for i2 in range(self.nwWeight):
+					self.cLabel[i][i2] = XXhash_real(i, i2, self.nCluster) #0:i, 1:i2
+			'''
+			self.cLabel = step1(self.nhWeight, self.nwWeight, self.nCluster, seed).astype(int);
 
 		#STEP2 : get centroid by cLabel
+		
 		centroid_sum = np.zeros(self.nCluster, dtype = int)
 		for i in range(self.nhWeight):
 			for i2 in range(self.nwWeight):
 				self.cCentro[self.cLabel[i][i2]] += self.cWeights[i][i2]
 				centroid_sum[self.cLabel[i][i2]] += 1
+		
 		
 
 		#print("------------------------------------------------")
@@ -91,6 +170,8 @@ class XXhash(object):
 				self.cCentro[i] = self.cCentro[i] / centroid_sum[i]
 		#print("cCentro is ", self.cCentro);
 		#print("------------------------------------------------")
+		
+		#self.cCentro = step2(self.nhWeight, self.nwWeight, self.nCluster).astype(int);
 
 		#STEP3 : weight update
 		#for i in range(self.nhWeight):

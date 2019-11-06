@@ -7,3 +7,5 @@ train/MNIST/train/*
 train/MNIST/*
 *.pyc
 *.swp
+*.swn
+*.swo

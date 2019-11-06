@@ -78,8 +78,11 @@ class kmeans_cluster(object):
 			# reduction		
 			self.cCentro = ptrC
 			self.cCentro = self.cCentro /  ptrS
-	def weight(self):
+
+	def real_weight(self):
 		return self.cWeights
+	def weight(self):
+		return self.cCentro[self.cLabel]
 	def label(self):
 		return self.cLabel
 	def centro(self):

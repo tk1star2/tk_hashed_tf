@@ -55,18 +55,18 @@ def base_model_config(dataset='MNIST'):
   # reduce step size after this many steps
   cfg.DECAY_STEPS = 1000		#original : 10000
 
-  # multiply the learning rate by this factor
-  cfg.LR_DECAY_FACTOR = 0.3 	# original : 0.1
-
+  #          ***********************************************
   # weight decay
   cfg.WEIGHT_DECAY = 0.001 #tk	# original : 0.0005
-
-  # learning rate
-  cfg.LEARNING_RATE = 0.1 		# original : 0.005
 
   # momentum
   cfg.MOMENTUM = 0.9			# original : 0.9
 
+  # multiply the learning rate by this factor
+  cfg.LR_DECAY_FACTOR = 0.1 	# original : 0.1
+
+  # learning rate
+  cfg.LEARNING_RATE = 0.1 		# original : 0.005
   #-------------------------------------------------------------------
 
   # wether to load pre-trained model

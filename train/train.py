@@ -17,6 +17,7 @@ from config import base_model_config as config
 from hashed import hashed
 from six.moves import xrange
 
+from numba import jit
 
 '''
 import cv2
@@ -92,20 +93,12 @@ def train():
 		data_sets = predataset()
 
 		#-----------------------------------------------------------------
-		def TK_TRANSFORM(grad, val, gpu_id=0):
-			if grad.ndim != 2 :
-				return grad;
-	
-			if str(val.name.split('/')[0]) in model.hash_num.keys():
-				hash_num = model.hash_num[val.name.split('/')[0]];
-				hash_index = model.hash_index[val.name.split('/')[0]];
-			else:
-				print("ERROR");
-				return grad;
+		@jit(nopython=True, cache=True)
+		def TK_TRANSFORM(grad, hash_num, hash_index):
 
 			temp_centroid = np.zeros(hash_num)
 			temp_centroid_num = np.zeros(hash_num)
-
+			temp_grad = np.zeros((grad.shape[0],grad.shape[1]))
 			#tk!! JUST like STEP2
 			for i in xrange(grad.shape[0]):
 				for i2 in xrange(grad.shape[1]):
@@ -117,7 +110,11 @@ def train():
 					temp_centroid[i] /= temp_centroid_num[i];
 
 			#tk!! JUST like STEP3
-			return temp_centroid[hash_index];
+			#return temp_centroid[hash_index];
+			for i in xrange(grad.shape[0]):
+				for i2 in xrange(grad.shape[1]):
+					temp_grad[i][i2]=temp_centroid[hash_index[i][i2]]
+			return temp_grad;
 		#-----------------------------------------------------------------
 		def _load_data(load_to_placeholder=True):
 			"""Read a batch of image and bounding box annotations.
@@ -230,7 +227,23 @@ def train():
 
 					feed_dict = {}
 					for i in xrange(len(model.grads_placeholder)):
-						feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], model.grads_placeholder[i][1]);
+						if grads[i].ndim != 2 :
+							feed_dict[model.grads_placeholder[i][0]] = grads[i];
+							continue;
+	
+						if str(model.grads_placeholder[i][1].name.split('/')[0]) in model.hash_num.keys():
+							hash_num = model.hash_num[model.grads_placeholder[i][1].name.split('/')[0]];
+							hash_index = model.hash_index[model.grads_placeholder[i][1].name.split('/')[0]];
+							#print("*********************hashnum is{}******************".format(type(hash_num)))
+							#feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], model.grads_placeholder[i][1], hash_num, hash_index);
+							feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], hash_num, hash_index);
+
+						else:
+							feed_dict[model.grads_placeholder[i][0]] = grads[i];
+							print("ERROR");
+							continue;
+
+
 					sess.run(model.train_op2, feed_dict=feed_dict ,options=run_options)
 
 				else : 

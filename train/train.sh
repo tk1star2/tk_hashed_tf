@@ -69,6 +69,6 @@ python3 train.py \
   --train_dir="$TRAIN_DIR/train" \
   --net=$NET \
   --pretrained_model_path=$PRETRAINED_MODEL_PATH \
-  --gpu=$GPUID
+  --gpu=$GPUID\
   --hashed=True
 

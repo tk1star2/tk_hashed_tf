@@ -114,7 +114,7 @@ class hashed():
 			print("debug2.................................................add_loss_graph : end")
 			if hashed:
 				self._add_hash_train_graph()
-			else
+			else:
 				self._add_train_graph()
 			print("debug3...............................................add_train_graph : end")
 
@@ -122,9 +122,15 @@ class hashed():
 	#-------------------STEP1. cost function for loss---------------------------------
 		#save_dict = {'W1' : W1_arr, 'B1' : B1_arr, 'W2' : W2_arr, 'B2' : B2_arr};
 
+		#case1
 		#dense1 = self._fc_layer('dense1', self.image_input, hiddens=1000, flatten=True)
 		#self.preds = self._fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False)
 
+		#case2
+		#dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=98000)
+		#self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=1250)
+
+		#case3
 		#dense2 = self._fc_layer('dense2', dense1, hiddens=10, flatten=False)
 		#self.preds = tf.nn.dropout(dense2, self.keep_prob, name='drop3')
 	#---------------------------------------------------------------------------------
@@ -140,9 +146,9 @@ class hashed():
 			assert tf.gfile.Exists(mc.PRETRAINED_MODEL_PATH), 'Cannot find pretrained model at the given path:' '  {}'.format(mc.PRETRAINED_MODEL_PATH)
 		self.caffemodel_weight = joblib.load(mc.PRETRAINED_MODEL_PATH)
 
-		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=98000)
+		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=9800, blocked=True, blocked_param=49)
 
-		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=1250)
+		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=2048, blocked=True, blocked_param=64)
 
 		#preds :(100, 10)
 		#print("tk :preds is this {}".format(self.preds))
@@ -314,8 +320,8 @@ class hashed():
 		"""
 	#---------------------------------------------------------------------------
 	def _hashed_fc_layer(
-      self, layer_name, inputs, hiddens, centroid_num=30, flatten=False, relu=True,
-      xavier=False, stddev=0.001, hashed = True):
+      self, layer_name, inputs, hiddens, flatten=False, relu=True,
+      xavier=False, stddev=0.001, centroid_num=30, hashed = True, blocked=False, blocked_param=64):
 		mc = self.mc
 
 		use_pretrained_param = False
@@ -365,7 +371,7 @@ class hashed():
 						use_pretrained_param = False
 						print ('Shape of the pretrained parameter of {} does not match, ' 'use randomly initialized parameter'.format(layer_name))
 
-			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num)
+			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param)
 			self.hash_index[layer_name] = kmeans.label();
 			self.hash_num[layer_name] = kmeans.num_centro();
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)

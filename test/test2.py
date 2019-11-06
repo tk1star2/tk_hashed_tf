@@ -155,7 +155,8 @@ with tf.variable_scope(layer_name) as scope:
 	if use_pretrained_param:
 		#tk
 		#kmeans = kmeans_cluster(kernel_val, max_iter=2)
-		kmeans = XXhash(cWeights=kernel_val, nCluster=9000)
+		kmeans = XXhash(cWeights=kernel_val, nCluster=9800)
+		#kmeans = XXhash(cWeights=kernel_val, nCluster=9800, blocked=True, blocked_param=64)
 		print("Kmeans label is", kmeans.label())
 		print("Kmeans cluster_centers is", kmeans.centro())
 		print("Kmeans weight is", kmeans.weight())
