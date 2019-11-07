@@ -44,7 +44,7 @@ def base_model_config(dataset='MNIST'):
   cfg.BATCH_SIZE = 100			#original : 20
 
   # max # of steps for batch
-  cfg.MAX_STEP = 10000 			# original : 100 0000
+  cfg.MAX_STEP = 1000 			# original : 100 0000
 
   # check point step
   cfg.CHECKPOINT_STEP = 1000	# original : 1000
@@ -55,15 +55,17 @@ def base_model_config(dataset='MNIST'):
   # reduce step size after this many steps
   cfg.DECAY_STEPS = 1000		#original : 10000
 
-  #          ***********************************************
   # weight decay
-  cfg.WEIGHT_DECAY = 0.001 #tk	# original : 0.0005
+  cfg.WEIGHT_DECAY = 0.001		# original : 0.0005
+
+  #          ***********************************************
 
   # momentum
   cfg.MOMENTUM = 0.9			# original : 0.9
 
   # multiply the learning rate by this factor
-  cfg.LR_DECAY_FACTOR = 0.1 	# original : 0.1
+  # decayed_lr  = lr * decay_factorglobal/decay_step)
+  cfg.LR_DECAY_FACTOR = 0.05 	# original : 0.1
 
   # learning rate
   cfg.LEARNING_RATE = 0.1 		# original : 0.005

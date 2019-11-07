@@ -1,10 +1,12 @@
 pretrain/.train.py.swp
 pretrain/MNIST/*
 pretrain/__pycache__/*
+posttrain/__pycache__/*
 test/__pycache__/*
 train/__pycache__/*
 train/MNIST/train/*
 train/MNIST/*
+posttrain/MNIST/*
 *.pyc
 *.swp
 *.swn

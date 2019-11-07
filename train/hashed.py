@@ -146,9 +146,9 @@ class hashed():
 			assert tf.gfile.Exists(mc.PRETRAINED_MODEL_PATH), 'Cannot find pretrained model at the given path:' '  {}'.format(mc.PRETRAINED_MODEL_PATH)
 		self.caffemodel_weight = joblib.load(mc.PRETRAINED_MODEL_PATH)
 
-		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=9800, blocked=True, blocked_param=49)
+		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=65536, blocked=True, blocked_param=64)
 
-		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=2048, blocked=True, blocked_param=64)
+		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=1250, blocked=True, blocked_param=5)
 
 		#preds :(100, 10)
 		#print("tk :preds is this {}".format(self.preds))

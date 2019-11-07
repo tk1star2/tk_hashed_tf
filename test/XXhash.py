@@ -14,13 +14,13 @@ from numba import jit
 #nCluster	: # of centroids
 #max_iter	: 1000
 
-def XXhash_real(x, y, nCluster=32):
+def XXhash_real(x, y, nCluster=32, SEED=0):
 	PRIME32_1 = int('0x9E3779B1', 16)
 	PRIME32_2 = int('0x85EBCA77', 16)
 	PRIME32_3 = int('0xC2B2AE3D', 16)
 	PRIME32_4 = int('0x27D4EB2F', 16)
 	PRIME32_5 = int('0x165667B1', 16)
-	SEED = int('0x00000000', 16)
+	#SEED = int('0x00000000', 16)
 	inputLength = nCluster;
 	MASK = 0b11111
 

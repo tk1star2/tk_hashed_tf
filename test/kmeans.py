@@ -77,7 +77,10 @@ class kmeans_cluster(object):
 
 			# reduction		
 			self.cCentro = ptrC
-			self.cCentro = self.cCentro /  ptrS
+			#self.cCentro = self.cCentro /  ptrS
+			for i in range(self.nCluster):
+				if ptrS[i] != 0:
+					self.cCentro[i] = self.cCentro[i] /  ptrS[i]
 
 	def real_weight(self):
 		return self.cWeights
