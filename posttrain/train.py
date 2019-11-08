@@ -333,9 +333,12 @@ def train():
 		print("tk is ", save_tuple2['dense2'][0].shape)		
 		print("tk is ", save_tuple2['dense2'][1])		
 		print("---------------------------------------------------------------")
+		'''
 		print("tk is ", save_tuple['dense1'][0])		
 		print("tk is ", save_tuple2['dense1'][0])		
-		'''
+		print("tk is ", save_tuple['dense2'][0])		
+		print("tk is ", save_tuple2['dense2'][0])		
+		
 		
 		#saver.save(sess,os.path.join(FLAGS.train_dir,"./MNIST_TRAIN.ckpt"));
 

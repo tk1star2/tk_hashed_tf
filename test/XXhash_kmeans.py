@@ -118,7 +118,7 @@ def step2(nhWeight, nwWeight, nCluster):
 	#print("cCentro is ", self.cCentro);
 
 class XXhash_kmeans(object):
-	def __init__(self, cWeights, XXarray, XXnCluster=9600, nCluster=32, blocked=False, blocked_param=64, seed=0, max_iter=1000):
+	def __init__(self, cWeights, XXarray, XXnCluster=9600, nCluster=2048, blocked=False, blocked_param=64, seed=0, max_iter=1000):
 		self.nCluster = nCluster
 	
 		if blocked :
@@ -128,8 +128,10 @@ class XXhash_kmeans(object):
 			print("XXncluster/block is", self.XXnCluster_per_block);
 			if cWeights.shape[0]%blocked_param == 0 :
 				self.nhWeight_per_block = int(cWeights.shape[0]/blocked_param);
+				self.nhWeight_no_exact = False;
 			else :
 				self.nhWeight_per_block = int(cWeights.shape[0]/blocked_param)+1;
+				self.nhWeight_no_exact = True;
 			print("nhWeight/block is", self.nhWeight_per_block);
 
 		self.nhWeight = cWeights.shape[0]
@@ -153,24 +155,35 @@ class XXhash_kmeans(object):
 			label_temp = []
 			self.cCentro = []
 			for i in range(blocked_param):
-				if i> int(self.nhWeight/self.nhWeight_per_block) :
-					break;
+				if self.nhWeight_no_exact :
+					if i> int(self.nhWeight/self.nhWeight_per_block) :
+						break;
 
-				print("{}-----{}".format(i*self.XXnCluster_per_block, (i+1)*self.XXnCluster_per_block))
 				kmeans = kmeans_cluster(\
-					self.before_cCentro[i*self.XXnCluster_per_block:(i+1)*self.nhWeight_per_block],\
+					self.before_cCentro[i*self.XXnCluster_per_block:(i+1)*self.XXnCluster_per_block],\
 					nCluster=self.nCluster_per_block,\
 					max_iter=max_iter);
-				label_temp.append(kmeans.label() + self.nCluster_per_block*i);
-				print("WOWOWOWOWOW-----", label_temp)
-				self.cCentro.append(kmeans.cCentro());
+				label_temp.extend((kmeans.label() + self.nCluster_per_block*i).astype(int));
+				self.cCentro.extend(kmeans.centro());
 			
+			label_temp = np.array(label_temp, dtype=int)
+			self.cCentro = np.array(self.cCentro)
+			np.set_printoptions(threshold=10)
+			if self.nhWeight_no_exact:
+				if len(label_temp)!= self.XXnCluster_per_block*(int(self.nhWeight/self.nhWeight_per_block)+1):
+					print("ERROR len is {}, it must be {}".format(len(label_temp), self.nCluster_per_block*(int(self.nhWeight/self.nhWeight_per_block)+1)))
+					print("{}-{}-{}".format(self.nCluster_per_block, self.nhWeight, self.nhWeight_per_block))
+					return;
+			else:
+				if len(label_temp)!= self.XXnCluster_per_block*(int(self.nhWeight/self.nhWeight_per_block)):
+					print("ERROR len is {}, it must be {}".format(len(label_temp), self.nCluster_per_block*(int(self.nhWeight/self.nhWeight_per_block))))
+					print("{}-{}-{}".format(self.nCluster_per_block, self.nhWeight, self.nhWeight_per_block))
+					return;
+
+
+			for i in range(self.nhWeight):
 				for i2 in range(self.nwWeight):
-					self.cLabel[i][i2] = XXhash_real(i, i2, self.nCluster_per_block, seed)+int(i/self.nhWeight_per_block)*self.nCluster_per_block;
-					
-			if len(label_temp)!= self.nCluter_per_block*(int(self.nhWeight/self.nhWeight_per_block)+1):
-				print("ERROR")
-				return;
+					self.cLabel[i][i2] = label_temp[XXarray[i][i2]];
 		else :
 			#STEP1 : hash index change
 			self.cCentro = -np.ones(self.nCluster)						#nothing

@@ -159,12 +159,13 @@ with tf.variable_scope(layer_name) as scope:
 		index_array=caffemodel_weight_info[layer_name][0]
 		before_nCentroid=caffemodel_weight_info[layer_name][1]
 		
-		kmeans = XXhash_kmeans(cWeights=kernel_val, nCluster=32, XXarray=index_array, XXnCluster=before_nCentroid, blocked=True, blocked_param=64);
+		kmeans = XXhash_kmeans(cWeights=kernel_val, nCluster=2048, XXarray=index_array, XXnCluster=before_nCentroid, blocked=True, blocked_param=64);
 
+		np.set_printoptions(threshold=10)
 		#kmeans = XXhash(cWeights=kernel_val, nCluster=9800, blocked=True, blocked_param=64)
-		print("Kmeans label is", kmeans.label())
-		print("Kmeans cluster_centers is", kmeans.centro())
-		print("Kmeans weight is", kmeans.weight())
+		#print("Kmeans label is", kmeans.label())
+		#print("Kmeans cluster_centers is", kmeans.centro())
+		#print("Kmeans weight is", kmeans.weight())
 			
 		kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
 		bias_init = tf.constant(bias_val, dtype=tf.float32)

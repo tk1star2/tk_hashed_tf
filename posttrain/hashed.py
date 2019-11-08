@@ -148,9 +148,9 @@ class hashed():
 		self.caffemodel_weight = joblib.load(mc.PRETRAINED_MODEL_PATH)
 		self.caffemodel_info = joblib.load(mc.PRETRAINED_INFO_PATH)
 
-		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=2048, blocked=False, blocked_param=64)
+		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=4096, blocked=True, blocked_param=64)
 
-		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=160, blocked=False, blocked_param=5)
+		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=320, blocked=True, blocked_param=5)
 
 		#preds :(100, 10)
 		#print("tk :preds is this {}".format(self.preds))
@@ -385,6 +385,7 @@ class hashed():
 			if use_pretrained_param:
 				print("1.TKTKTKTK:::::::", kernel_val)
 				print("2.TKTKTKTK:::::::", kmeans.weight())
+				print("3.TKTKTKTK:::::::", kmeans.label())
 				kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
 				bias_init = tf.constant(bias_val, dtype=tf.float32)
 			elif xavier:

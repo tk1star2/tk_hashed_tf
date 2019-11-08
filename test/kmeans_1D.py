@@ -45,6 +45,7 @@ class kmeans_cluster(object):
 		self.cLabel = -np.ones(self.nWeight, dtype=int)		#nothing
 		self.cCentro = np.zeros(self.nCluster)						#nothing
 		#self.mask = mask 	#nothing
+		#print("check!!!!!!!!!!!! cLabel size is {}, cCentro size is {}".format(self.nWeight, self.nCluster))
 
 		for k in range(self.nCluster):
 			self.cCentro[k] = self.minWeight + (self.maxWeight - self.minWeight) * k / (self.nCluster-1)

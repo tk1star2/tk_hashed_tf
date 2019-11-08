@@ -65,7 +65,7 @@ def base_model_config(dataset='MNIST'):
 
   # multiply the learning rate by this factor
   # decayed_lr  = lr * decay_factorglobal/decay_step)
-  cfg.LR_DECAY_FACTOR = 0.05 	# original : 0.1
+  cfg.LR_DECAY_FACTOR = 0.06 	# original : 0.1
 
   # learning rate
   cfg.LEARNING_RATE = 0.09 		# original : 0.005
