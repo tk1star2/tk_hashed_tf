@@ -40,7 +40,6 @@ b = np.array([1.2, 2.3, 3.4, 4.5])
 c = np.zeros(4, dtype=float)
 
 print(b[a])
-print(c[a] = a1)
 
 
 '''
@@ -51,3 +50,5 @@ for i in range(3):
 		
 print(index[2][1][0])
 '''
+for i in range(10):
+	print(i);
