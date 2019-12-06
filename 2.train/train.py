@@ -12,9 +12,7 @@ import time
 from datetime import datetime
 
 #sys.path.append('..')
-import pretrain 
 from config import base_model_config as config
-from hashed import hashed
 from six.moves import xrange
 
 from numba import jit
@@ -31,9 +29,7 @@ from utils.util import sparse_to_dense, bgr_to_rgb, bbox_transform
 '''
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('dataset', 'MNIST', """Currently only support MNIST? dataset.""")
-tf.app.flags.DEFINE_string('image_set', 'train',
-                           """ Can be train, trainval, val, or test""")
+tf.app.flags.DEFINE_string('dataset', 'MNIST', """Currently only support MNIST dataset.""")
 tf.app.flags.DEFINE_string('train_dir', './MNIST/train',
                             """Directory where to write event logs """
                             """and checkpoint.""")
@@ -46,7 +42,11 @@ tf.app.flags.DEFINE_string('hashed', 'True', """if it is hashing""")
 
 
 #---------------------------------------------------------------------------------
-def predataset():
+def IMGNET():
+	MNIST_PATH='../0.data/IMGNET'
+	VALIDATION_SIZE=5000
+def MNIST():
+	import MNIST as pretrain 
 	MNIST_PATH='../0.data/MNIST'
 	VALIDATION_SIZE=5000
 
@@ -77,20 +77,31 @@ def train():
 	assert FLAGS.dataset == 'MNIST', 'Currently only support MNIST dataset'
 	os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu
 
+	print("_-----------------------------print true??{}----------------".format(FLAGS.hashed))
 	with tf.Graph().as_default():
-		assert FLAGS.net == 'hashed' or FLAGS.net == 'hashed2', 'Selected neural net architecture not supported: {}'.format(FLAGS.net)
-		if FLAGS.net == 'hashed':
+		assert FLAGS.net == 'hashed_fc_MNIST' or FLAGS.net == 'hashed_conv_MNIST' or FLAGS.net == 'hashed_conv_IMGNET', 'Selected neural net architecture not supported: {}'.format(FLAGS.net)
+		if FLAGS.net == 'hashed_fc_MNIST':
+			from hashed_fc_MNIST import hashed
 			mc = config() # 1.config.py
 			mc.IS_TRAINING = True
 			mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
 			model = hashed(mc, gpu_id=FLAGS.gpu, hashed=FLAGS.hashed) # 2.hashed.py
-		elif FLAGS.net == 'hashed2':
+			data_sets = MNIST()
+		elif FLAGS.net == 'hashed_conv_MNIST':
+			from hashed_conv_MNIST import hashed
 			mc = config() # 1.config.py
 			mc.IS_TRAINING = True
 			mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
-			model = hashed(mc) # 2.hashed.py
+			model = hashed(mc, gpu_id=FLAGS.gpu, hashed=FLAGS.hashed) # 2.hashed.py
+			data_sets = MNIST()
+		elif FLAGS.net == 'hashed_conv_IMGNET':
+			#from hashed_conv_MNIST import hashed
+			mc = config() # 1.config.py
+			mc.IS_TRAINING = True
+			mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
+			#model = hashed(mc) # 2.hashed.py
+			data_sets = IMGNET()
 
-		data_sets = predataset()
 
 		#-----------------------------------------------------------------
 		@jit(nopython=True, cache=True)
@@ -221,7 +232,8 @@ def train():
 			#**********************main function*******************************
 			if mc.NUM_THREAD > 0: #4
 				#
-				if FLAGS.hashed : 
+				if FLAGS.hashed == True: 
+					print("===================================++++WRONG===============================")
 					loss_value = sess.run(model.loss, options=run_options)
 					grads = sess.run([grad for (grad,var) in model.grads_vars ], options=run_options)
 
@@ -235,7 +247,6 @@ def train():
 							hash_num = model.hash_num[model.grads_placeholder[i][1].name.split('/')[0]];
 							hash_index = model.hash_index[model.grads_placeholder[i][1].name.split('/')[0]];
 							#print("*********************hashnum is{}******************".format(type(hash_num)))
-							#feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], model.grads_placeholder[i][1], hash_num, hash_index);
 							feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], hash_num, hash_index);
 
 						else:
@@ -247,7 +258,7 @@ def train():
 					sess.run(model.train_op2, feed_dict=feed_dict ,options=run_options)
 
 				else : 
-					print("ERRRORORORORORORTK")
+					#print("ERRRORORORORORORTK")
 					_, loss_value = sess.run([model.train_op, model.loss], options=run_options)
 				
 
@@ -287,62 +298,63 @@ def train():
 		#																		   #
 		#***************************************************************************
 
-		save_tuple = {};
-		save_tuple2 = {};
-		save_temp = [];	
-		for i, tense in enumerate(model.model_params):
-			hash_num = tense.name.split('/')[0];
-			hash_num2 = tense.name.split('/')[1][:-2];
-			#print("hash-num", hash_num);
-			#print("hash-num", hash_num2);
+		if FLAGS.hashed == True: 
+			save_tuple = {};
+			save_tuple2 = {};
+			save_temp = [];	
+			for i, tense in enumerate(model.model_params):
+				hash_num = tense.name.split('/')[0];
+				hash_num2 = tense.name.split('/')[1][:-2];
+				#print("hash-num", hash_num);
+				#print("hash-num", hash_num2);
 
-			if hash_num2=='weights':
-				#print("weights!!!!!!!!!!!!")
-				save_temp.append(tense.eval(sess));
-			elif hash_num2=='biases':
-				#print("biases!!!!!!!!!!!!")
-				save_temp.append(tense.eval(sess));
-				save_tuple[hash_num]=save_temp;
-				save_temp = [];
+				if hash_num2=='weights':
+					#print("weights!!!!!!!!!!!!")
+					save_temp.append(tense.eval(sess));
+				elif hash_num2=='biases':
+					#print("biases!!!!!!!!!!!!")
+					save_temp.append(tense.eval(sess));
+					save_tuple[hash_num]=save_temp;
+					save_temp = [];
 
-				save_temp.append(model.hash_index[hash_num]) # index array
-				save_temp.append(model.hash_num[hash_num]) # nCentroid
-				save_tuple2[hash_num] = save_temp;
-				save_temp = [];
+					save_temp.append(model.hash_index[hash_num]) # index array
+					save_temp.append(model.hash_num[hash_num]) # nCentroid
+					save_tuple2[hash_num] = save_temp;
+					save_temp = [];
 
-		'''
-		for tuple_tem in save_tuple.keys():
-			print('tuple_tem key is', tuple_tem)
+			'''
+			for tuple_tem in save_tuple.keys():
+				print('tuple_tem key is', tuple_tem)
 
-		for tuple_tem in save_tuple.values():
-			#print('tuple_tem key is', tuple_tem)
-			for tuple_temp2 in tuple_tem:
-				print('tuple_tem key is', tuple_temp2.shape)
+			for tuple_tem in save_tuple.values():
+				#print('tuple_tem key is', tuple_tem)
+				for tuple_temp2 in tuple_tem:
+					print('tuple_tem key is', tuple_temp2.shape)
 
 
-		print("---------------------------------------------------------------")
-		print("tk is ", save_tuple['dense1'][0].shape)		
-		print("tk is ", save_tuple['dense1'][1].shape)		
-		print("tk is ", save_tuple['dense2'][0].shape)		
-		print("tk is ", save_tuple['dense2'][1].shape)		
+			print("---------------------------------------------------------------")
+			print("tk is ", save_tuple['dense1'][0].shape)		
+			print("tk is ", save_tuple['dense1'][1].shape)		
+			print("tk is ", save_tuple['dense2'][0].shape)		
+			print("tk is ", save_tuple['dense2'][1].shape)		
 		
-		print("tk is ", save_tuple2['dense1'][0].shape)		
-		print("tk is ", save_tuple2['dense1'][1])		
-		print("tk is ", save_tuple2['dense2'][0].shape)		
-		print("tk is ", save_tuple2['dense2'][1])		
-		'''
+			print("tk is ", save_tuple2['dense1'][0].shape)		
+			print("tk is ", save_tuple2['dense1'][1])		
+			print("tk is ", save_tuple2['dense2'][0].shape)		
+			print("tk is ", save_tuple2['dense2'][1])		
+			'''
 		
-		#saver.save(sess,os.path.join(FLAGS.train_dir,"./MNIST_TRAIN.ckpt"));
+			#saver.save(sess,os.path.join(FLAGS.train_dir,"./MNIST_TRAIN.ckpt"));
 
 
-		import pickle
+			import pickle
 
-		#os.getcwd()
-		with open(os.path.join(FLAGS.train_dir, 'MNIST_TRAIN.pkl'), 'wb') as f:
-			pickle.dump(save_tuple, f);
+			#os.getcwd()
+			with open(os.path.join(FLAGS.train_dir, 'MNIST_TRAIN.pkl'), 'wb') as f:
+				pickle.dump(save_tuple, f);
 
-		with open(os.path.join(FLAGS.train_dir, 'MNIST_TRAIN_INFO.pkl'), 'wb') as f:
-			pickle.dump(save_tuple2, f);
+			with open(os.path.join(FLAGS.train_dir, 'MNIST_TRAIN_INFO.pkl'), 'wb') as f:
+				pickle.dump(save_tuple2, f);
 	
 
 #---------------------------------------------------------------------------------

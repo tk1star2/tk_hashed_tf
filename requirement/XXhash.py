@@ -158,8 +158,6 @@ class XXhash(object):
 			for i2 in range(self.nwWeight):
 				self.cCentro[self.cLabel[i][i2]] += self.cWeights[i][i2]
 				centroid_sum[self.cLabel[i][i2]] += 1
-		
-		
 
 		#print("------------------------------------------------")
 		#print("cCentro is ", self.cCentro);

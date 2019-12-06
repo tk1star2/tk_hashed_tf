@@ -150,9 +150,9 @@ class hashed():
 		self.caffemodel_weight = joblib.load(mc.PRETRAINED_MODEL_PATH)
 		self.caffemodel_info = joblib.load(mc.PRETRAINED_INFO_PATH)
 
-		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=512, blocked=True, blocked_param=64)
+		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=256, blocked=True, blocked_param=64)
 
-		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=40, blocked=True, blocked_param=5)
+		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=20, blocked=True, blocked_param=5)
 
 		#preds :(100, 10)
 		#print("tk :preds is this {}".format(self.preds))

@@ -1,2 +1,3 @@
 rm ./MNIST/train/*
-./train.sh -net hashed -gpu 0 -train_dir ./MNIST
+./train.sh -net hashed_conv_MNIST -hashed False
+#./train.sh -net hashed_fc_MNIST -hashed False
