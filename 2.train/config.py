@@ -68,7 +68,7 @@ def base_model_config(dataset='MNIST'):
   cfg.LR_DECAY_FACTOR = 0.07 	# original : 0.1
 
   # learning rate
-  cfg.LEARNING_RATE = 0.1 		# original : 0.005
+  cfg.LEARNING_RATE = 0.12 		# original : 0.005
   #-------------------------------------------------------------------
 
   # wether to load pre-trained model

@@ -19,7 +19,7 @@ import sys
 import numpy as np
 sys.path.append('../requirement/')
 #from kmeans import kmeans_cluster
-from XXhash import XXhash
+from T2_XXhash import XXhash
 
 def _variable_on_device(name, shape, initializer, trainable=True):
   """Helper to create a Variable.
@@ -109,11 +109,11 @@ class hashed():
 			print("-------------hashed is false????{}----------".format(hashed))
 			
 			#make Tensor
-			self._add_forward_graph()
+			self._add_forward_graph(hashed)
 			print("debug1.................................................add_forward__graph : end")
 			self._add_loss_graph()
 			print("debug2.................................................add_loss_graph : end")
-			if hashed==True:
+			if hashed== "True":
 				print("WRONG");
 				self._add_hash_train_graph()
 			else:
@@ -136,7 +136,7 @@ class hashed():
 		#dense2 = self._fc_layer('dense2', dense1, hiddens=10, flatten=False)
 		#self.preds = tf.nn.dropout(dense2, self.keep_prob, name='drop3')
 	#---------------------------------------------------------------------------------
-	def _add_forward_graph(self):
+	def _add_forward_graph(self, hashed):
 		"""NN architecture."""
 
 		mc = self.mc
@@ -149,18 +149,32 @@ class hashed():
 		self.caffemodel_weight = joblib.load(mc.PRETRAINED_MODEL_PATH)
 
 		# (?, 28,28,1) > (?, 28,28,32)
-		conv1 = self._conv_layer('conv1', self.image_input, filters=32, size=3, stride=1, padding='SAME', relu=True);
-		pool1 = self._pooling_layer('pool1', conv1, size=2, stride=2, padding='SAME');
+		if hashed=="True":
+			conv1 = self._hashed_conv_layer('conv1', self.image_input, filters=32, size=3, stride=1, padding='SAME', relu=True, centroid_num=256, blocked=False, blocked_param=32);
+			pool1 = self._pooling_layer('pool1', conv1, size=2, stride=2, padding='SAME');
 
-		conv2 = self._conv_layer('conv2', pool1, filters=64, size=3, stride=1, padding='SAME', relu=True);
-		pool2 = self._pooling_layer('pool2', conv2, size=2, stride=2, padding='SAME');
+			conv2 = self._hashed_conv_layer('conv2', pool1, filters=64, size=3, stride=1, padding='SAME', relu=True, centroid_num=15384, blocked=False, blocked_param=64);
+			pool2 = self._pooling_layer('pool2', conv2, size=2, stride=2, padding='SAME');
 			
-		conv3 = self._conv_layer('conv3', pool2, filters=128, size=3, stride=1, padding='SAME', relu=True);
-		pool3 = self._pooling_layer('pool3', conv3, size=2, stride=2, padding='SAME');
+			conv3 = self._hashed_conv_layer('conv3', pool2, filters=128, size=3, stride=1, padding='SAME', relu=True, centroid_num=65536, blocked=False, blocked_param=64);
+			pool3 = self._pooling_layer('pool3', conv3, size=2, stride=2, padding='SAME');
 
-		dense1 = self._fc_layer('dense1', pool3, hiddens=625, flatten=True, relu=True);
+			dense1 = self._hashed_fc_layer('dense1', pool3, hiddens=625, flatten=True, relu=True, centroid_num=65536, blocked=True, blocked_param=64);
 
-		self.preds = self._fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False);
+			self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=1250, blocked=True, blocked_param=5);
+		else :
+			conv1 = self._conv_layer('conv1', self.image_input, filters=32, size=3, stride=1, padding='SAME', relu=True);
+			pool1 = self._pooling_layer('pool1', conv1, size=2, stride=2, padding='SAME');
+
+			conv2 = self._conv_layer('conv2', pool1, filters=64, size=3, stride=1, padding='SAME', relu=True);
+			pool2 = self._pooling_layer('pool2', conv2, size=2, stride=2, padding='SAME');
+			
+			conv3 = self._conv_layer('conv3', pool2, filters=128, size=3, stride=1, padding='SAME', relu=True);
+			pool3 = self._pooling_layer('pool3', conv3, size=2, stride=2, padding='SAME');
+
+			dense1 = self._fc_layer('dense1', pool3, hiddens=625, flatten=True, relu=True);
+
+			self.preds = self._fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False);
 		#self, layer_name, inputs, hiddens, flatten=False, relu=True, xavier=False, stddev=0.001, centroid_num=30, hashed = True, blocked=False, blocked_param=64):
 		#self, layer_name, inputs, hiddens, flatten=False, relu=True, xavier=False, stddev=0.001):
 
@@ -389,7 +403,7 @@ class hashed():
 						use_pretrained_param = False
 						print ('Shape of the pretrained parameter of {} does not match, ' 'use randomly initialized parameter'.format(layer_name))
 
-			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param)
+			kmeans = XXhash(Conv_FC="FC", cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param)
 			self.hash_index[layer_name] = kmeans.label();
 			self.hash_num[layer_name] = kmeans.num_centro();
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
@@ -583,7 +597,7 @@ class hashed():
 	#---------------------------------------------------------------------------
 	def _hashed_conv_layer(
 		self, layer_name, inputs, filters, size, stride, padding='SAME', hashed=True,
-		freeze=False, xavier=False, relu=True, stddev=0.001, centroid_num=32):
+		freeze=False, xavier=False, relu=True, stddev=0.001, centroid_num=32,  blocked=False, blocked_param=64):
 
 		mc = self.mc
 		use_pretrained_param = False
@@ -594,10 +608,14 @@ class hashed():
 			else :
 				BIAS_USE = False;
 			if layer_name in cw:
-				kernel_val = np.transpose(cw[layer_name][0], [2,3,1,0])
+				#kernel_val = np.transpose(cw[layer_name][0], [2,3,1,0])
+				kernel_val = cw[layer_name][0];
 				if (BIAS_USE) :
 					bias_val = cw[layer_name][1]
 				# check the shape
+				print("size{}, size{}, size{}, size{} ".format(size,size,inputs.get_shape().as_list()[-1], filters));
+				print("kernel_val.shape is {}".format(kernel_val.shape))
+				print("inputs.get_shape() is {}".format(inputs.get_shape()))
 				if (kernel_val.shape == (size, size, inputs.get_shape().as_list()[-1], filters)) \
 					and (BIAS_USE==False or bias_val.shape == (filters, )):
 					use_pretrained_param = True
@@ -611,7 +629,7 @@ class hashed():
 		with tf.variable_scope(layer_name) as scope:
 			channels = inputs.get_shape()[3]
 
-			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num)
+			kmeans = XXhash(Conv_FC="conv", cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param)
 			self.hash_index[layer_name] = kmeans.label();
 			self.hash_num[layer_name] = kmeans.num_centro();
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
@@ -755,7 +773,7 @@ class hashed():
 					bias_init = tf.constant_initializer(0.0)
 
 			kernel = _variable_with_weight_decay(
-				'kernels', shape=[size, size, int(channels), filters],
+				'weights', shape=[size, size, int(channels), filters],
 				wd=mc.WEIGHT_DECAY, initializer=kernel_init, trainable=(not freeze))
 
 			if BIAS_USE:

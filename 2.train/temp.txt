@@ -1,118 +1,66 @@
-_-----------------------------print true??False----------------
--------------hashed is false????False----------
+_-----------------------------print true??True----------------
 mc.LOAD_PRETRAINED_MODEL is True
-layer name is  (3, 3, 1, 32)
-size3, size3, size1, size32 
-kernel_val.shape is (3, 3, 1, 32)
-inputs.get_shape() is (100, 28, 28, 1)
-=============================================================================================================================================here!!!!!
-inputs?? Tensor("batch:0", shape=(100, 28, 28, 1), dtype=float32, device=/device:GPU:0)
-kernel?? <tf.Variable 'conv1/kernels:0' shape=(3, 3, 1, 32) dtype=float32_ref>
-conv?? Tensor("conv1/convolution:0", shape=(100, 28, 28, 32), dtype=float32, device=/device:GPU:0)
-END :  (100, 28, 28, 32)
-inputs.get_shape() is (100, 28, 28, 32)
-END :  (100, 14, 14, 32)
-layer name is  (3, 3, 32, 64)
-size3, size3, size32, size64 
-kernel_val.shape is (3, 3, 32, 64)
-inputs.get_shape() is (100, 14, 14, 32)
-=============================================================================================================================================here!!!!!
-inputs?? Tensor("pool1/MaxPool:0", shape=(100, 14, 14, 32), dtype=float32, device=/device:GPU:0)
-kernel?? <tf.Variable 'conv2/kernels:0' shape=(3, 3, 32, 64) dtype=float32_ref>
-conv?? Tensor("conv2/convolution:0", shape=(100, 14, 14, 64), dtype=float32, device=/device:GPU:0)
-END :  (100, 14, 14, 64)
-inputs.get_shape() is (100, 14, 14, 64)
-END :  (100, 7, 7, 64)
-layer name is  (3, 3, 64, 128)
-size3, size3, size64, size128 
-kernel_val.shape is (3, 3, 64, 128)
-inputs.get_shape() is (100, 7, 7, 64)
-=============================================================================================================================================here!!!!!
-inputs?? Tensor("pool2/MaxPool:0", shape=(100, 7, 7, 64), dtype=float32, device=/device:GPU:0)
-kernel?? <tf.Variable 'conv3/kernels:0' shape=(3, 3, 64, 128) dtype=float32_ref>
-conv?? Tensor("conv3/convolution:0", shape=(100, 7, 7, 128), dtype=float32, device=/device:GPU:0)
-END :  (100, 7, 7, 128)
-inputs.get_shape() is (100, 7, 7, 128)
-END :  (100, 4, 4, 128)
-kernel_val.shape is (625, 2048)
-inputs.get_shape() is (100, 4, 4, 128)
-see this :  [[ 5.85005470e-02  3.46248411e-02  1.35524049e-01 ... -2.06027836e-01
-  -8.53845254e-02 -6.88088462e-02]
- [ 4.42437269e-03  1.43762846e-02  1.69052005e-01 ... -1.73509777e-01
-   1.49477333e-01 -2.60294154e-02]
- [-5.06215841e-02  2.22042307e-01  1.34115517e-02 ... -2.15411205e-02
-   1.27968326e-01 -3.84016670e-02]
+TK:::True???? True
+TK:::True????
+Tfc !!! False ------  64 -------- FC
+Tfc !!! False ------  64
+1.TKTKTKTK::::::: [[21434 14721 39962 ... 19970 29823  7718]
+ [26810 28379 38230 ... 18238 19809 13095]
+ [21961 40094 25098 ... 29955 14958 33093]
  ...
- [-1.89298112e-02 -1.84565280e-02 -3.53435166e-02 ... -1.11864479e-02
-  -1.87166501e-02 -8.77667964e-03]
- [ 9.08574089e-02 -8.22565109e-02 -7.64592132e-03 ...  1.29892439e-01
-  -7.05557541e-05  1.00044355e-01]
- [ 4.90320213e-02  9.33132172e-02  3.53040814e-01 ...  1.11013196e-01
-  -1.83084503e-01 -9.42522213e-02]]
-----------------------2!!!flatten------------------{},{},{} 4 4 128
-----------------------2!!!flatten------------------{} (625, 2048)
-=============================================================================================================================================here!!!!!
-[[ 5.85005470e-02  4.42437269e-03 -5.06215841e-02 ... -1.89298112e-02
-   9.08574089e-02  4.90320213e-02]
- [ 3.46248411e-02  1.43762846e-02  2.22042307e-01 ... -1.84565280e-02
-  -8.22565109e-02  9.33132172e-02]
- [ 1.35524049e-01  1.69052005e-01  1.34115517e-02 ... -3.53435166e-02
-  -7.64592132e-03  3.53040814e-01]
+ [56403 57972 51258 ... 47833 49400 30038]
+ [61778 56240 20313 ... 46101 10172 28306]
+ [37172 30459 32029 ... 12036 30171 23456]]
+1.TKTKTKTK::::::: [-0.20897142  0.00162703  0.06731788 ...  0.04094495 -0.00729039
+ -0.02340143]
+2.TKTKTKTK::::::: [[-0.08325482 -0.08053784  0.05567496 ...  0.01651989 -0.03469266
+  -0.01165011]
+ [-0.04050641  0.06943937  0.02848171 ... -0.00346455 -0.08863269
+  -0.01918367]
+ [-0.07836718  0.06162957 -0.02089075 ...  0.05267294 -0.01277969
+   0.05058981]
  ...
- [-2.06027836e-01 -1.73509777e-01 -2.15411205e-02 ... -1.11864479e-02
-   1.29892439e-01  1.11013196e-01]
- [-8.53845254e-02  1.49477333e-01  1.27968326e-01 ... -1.87166501e-02
-  -7.05557541e-05 -1.83084503e-01]
- [-6.88088462e-02 -2.60294154e-02 -3.84016670e-02 ... -8.77667964e-03
-   1.00044355e-01 -9.42522213e-02]]
-END :  (100, 625)
-kernel_val.shape is (10, 625)
-inputs.get_shape() is (100, 625)
-see this :  [[-0.20568731 -0.08266604 -0.09425306 ...  0.00698203 -0.00922986
-  -0.01937854]
- [-0.12477512 -0.03177567 -0.14480405 ... -0.02345018 -0.24127871
-   0.00574012]
- [ 0.04275272 -0.18739665 -0.23988596 ... -0.02511984  0.10166045
-  -0.16669269]
+ [ 0.04974858  0.00753045  0.00060242 ... -0.04599227  0.07898116
+  -0.07197489]
+ [-0.09516573 -0.06924545 -0.16555707 ...  0.03569545  0.02803542
+   0.09989942]
+ [-0.08570526 -0.10147173  0.00755479 ...  0.03564235 -0.04151798
+   0.04098386]]
+Tfc !!! False ------  5 -------- FC
+Tfc !!! False ------  5
+1.TKTKTKTK::::::: [[1134  343 1190 ...  427  421  596]
+ [1068  833  270 ...  757  439  202]
+ [ 455  448  868 ...  532  625  703]
  ...
- [-0.06751459 -0.0322892   0.00901739 ... -0.00310415 -0.03667607
-  -0.18606138]
- [-0.08396881 -0.02538307 -0.06755056 ... -0.00689984  0.09748204
-   0.0443453 ]
- [ 0.03816819  0.12412584 -0.03953178 ... -0.00890281 -0.21084115
-   0.08236497]]
-=============================================================================================================================================here!!!!!
-[[-0.20568731 -0.12477512  0.04275272 ... -0.06751459 -0.08396881
-   0.03816819]
- [-0.08266604 -0.03177567 -0.18739665 ... -0.0322892  -0.02538307
-   0.12412584]
- [-0.09425306 -0.14480405 -0.23988596 ...  0.00901739 -0.06755056
-  -0.03953178]
+ [ 935 1096  465 ...  936  304  466]
+ [ 800  482  415 ...  963  499  820]
+ [1162  926  364 ...  851  533  296]]
+1.TKTKTKTK::::::: [-0.41657405 -0.10241162 -0.34303217 ... -0.14060355 -0.11613033
+ -0.29853367]
+2.TKTKTKTK::::::: [[-0.4442027  -0.30477865 -0.43466545 ... -0.50483041 -0.28839617
+  -0.30698934]
+ [-0.43465935 -0.15546672 -0.30971798 ... -0.42904827 -0.2864794
+  -0.47162975]
+ [-0.06826249 -0.14102325 -0.26475577 ... -0.1591169  -0.46505104
+  -0.28025037]
  ...
- [ 0.00698203 -0.02345018 -0.02511984 ... -0.00310415 -0.00689984
-  -0.00890281]
- [-0.00922986 -0.24127871  0.10166045 ... -0.03667607  0.09748204
-  -0.21084115]
- [-0.01937854  0.00574012 -0.16669269 ... -0.18606138  0.0443453
-   0.08236497]]
-END :  (100, 10)
+ [-0.28229337 -0.29953955 -0.14938868 ... -0.42777585 -0.36251113
+  -0.58394041]
+ [-0.30482474 -0.16759752 -0.22658783 ... -0.35610834 -0.22052684
+  -0.39340278]
+ [-0.17586309 -0.05270013 -0.17651981 ... -0.24273928 -0.26735832
+  -0.4272964 ]]
 debug1.................................................add_forward__graph : end
 debug2.................................................add_loss_graph : end
-grad_vars size is  Tensor("gradients/AddN_4:0", shape=(3, 3, 1, 32), dtype=float32, device=/device:GPU:0)
-0 trainable variable is !!!var: Tensor("gradients/AddN_4:0", shape=(3, 3, 1, 32), dtype=float32, device=/device:GPU:0)
-0 trainable variable is !!!var: <tf.Variable 'conv1/kernels:0' shape=(3, 3, 1, 32) dtype=float32_ref>
-1 trainable variable is !!!var: Tensor("gradients/AddN_3:0", shape=(3, 3, 32, 64), dtype=float32, device=/device:GPU:0)
-1 trainable variable is !!!var: <tf.Variable 'conv2/kernels:0' shape=(3, 3, 32, 64) dtype=float32_ref>
-2 trainable variable is !!!var: Tensor("gradients/AddN_2:0", shape=(3, 3, 64, 128), dtype=float32, device=/device:GPU:0)
-2 trainable variable is !!!var: <tf.Variable 'conv3/kernels:0' shape=(3, 3, 64, 128) dtype=float32_ref>
-3 trainable variable is !!!var: Tensor("gradients/AddN_1:0", shape=(2048, 625), dtype=float32, device=/device:GPU:0)
-3 trainable variable is !!!var: <tf.Variable 'dense1/weights:0' shape=(2048, 625) dtype=float32_ref>
-4 trainable variable is !!!var: Tensor("gradients/dense1/BiasAdd_grad/tuple/control_dependency_1:0", shape=(625,), dtype=float32, device=/device:GPU:0)
-4 trainable variable is !!!var: <tf.Variable 'dense1/biases:0' shape=(625,) dtype=float32_ref>
-5 trainable variable is !!!var: Tensor("gradients/AddN:0", shape=(625, 10), dtype=float32, device=/device:GPU:0)
-5 trainable variable is !!!var: <tf.Variable 'dense2/weights:0' shape=(625, 10) dtype=float32_ref>
-6 trainable variable is !!!var: Tensor("gradients/dense2/BiasAdd_grad/tuple/control_dependency_1:0", shape=(10,), dtype=float32, device=/device:GPU:0)
-6 trainable variable is !!!var: <tf.Variable 'dense2/biases:0' shape=(10,) dtype=float32_ref>
+tk:grads_vars is  [(<tf.Tensor 'gradients/AddN_1:0' shape=(784, 1000) dtype=float32>, <tf.Variable 'dense1/weights:0' shape=(784, 1000) dtype=float32_ref>), (<tf.Tensor 'gradients/dense1/BiasAdd_grad/tuple/control_dependency_1:0' shape=(1000,) dtype=float32>, <tf.Variable 'dense1/biases:0' shape=(1000,) dtype=float32_ref>), (<tf.Tensor 'gradients/AddN:0' shape=(1000, 10) dtype=float32>, <tf.Variable 'dense2/weights:0' shape=(1000, 10) dtype=float32_ref>), (<tf.Tensor 'gradients/dense2/BiasAdd_grad/tuple/control_dependency_1:0' shape=(10,) dtype=float32>, <tf.Variable 'dense2/biases:0' shape=(10,) dtype=float32_ref>)]
+0 trainable variable is !!!grad: Tensor("gradients/AddN_1:0", shape=(784, 1000), dtype=float32, device=/device:GPU:0)
+0 trainable variable is !!!var: <tf.Variable 'dense1/weights:0' shape=(784, 1000) dtype=float32_ref>
+1 trainable variable is !!!grad: Tensor("gradients/dense1/BiasAdd_grad/tuple/control_dependency_1:0", shape=(1000,), dtype=float32, device=/device:GPU:0)
+1 trainable variable is !!!var: <tf.Variable 'dense1/biases:0' shape=(1000,) dtype=float32_ref>
+2 trainable variable is !!!grad: Tensor("gradients/AddN:0", shape=(1000, 10), dtype=float32, device=/device:GPU:0)
+2 trainable variable is !!!var: <tf.Variable 'dense2/weights:0' shape=(1000, 10) dtype=float32_ref>
+3 trainable variable is !!!grad: Tensor("gradients/dense2/BiasAdd_grad/tuple/control_dependency_1:0", shape=(10,), dtype=float32, device=/device:GPU:0)
+3 trainable variable is !!!var: <tf.Variable 'dense2/biases:0' shape=(10,) dtype=float32_ref>
 debug3...............................................add_train_graph : end
 Successfully Imported ../0.data/MNIST/train-images.gz
 Extracting ../0.data/MNIST/train-images.gz
@@ -122,68 +70,322 @@ Successfully Imported ../0.data/MNIST/test-images.gz
 Extracting ../0.data/MNIST/test-images.gz
 Successfully Imported ../0.data/MNIST/test-labels.gz
 Extracting ../0.data/MNIST/test-labels.gz
-Accuracy :  0.9931000059843064
------------what is loss : 4.55655574798584
-2019-12-06 06:56:33.047118: step 0, loss = 4.56 (804.5 images/sec; 0.124 sec/batch)
------------what is loss : 4.518955707550049
-2019-12-06 06:56:33.161569: step 10, loss = 4.52 (2214.6 images/sec; 0.045 sec/batch)
------------what is loss : 4.4473419189453125
-2019-12-06 06:56:33.238645: step 20, loss = 4.45 (1992.5 images/sec; 0.050 sec/batch)
------------what is loss : 4.364973545074463
-2019-12-06 06:56:33.310168: step 30, loss = 4.36 (2221.2 images/sec; 0.045 sec/batch)
------------what is loss : 4.279994010925293
-2019-12-06 06:56:33.382243: step 40, loss = 4.28 (2208.4 images/sec; 0.045 sec/batch)
------------what is loss : 4.19522762298584
-2019-12-06 06:56:33.456663: step 50, loss = 4.20 (2188.7 images/sec; 0.046 sec/batch)
------------what is loss : 4.111637115478516
-2019-12-06 06:56:33.528349: step 60, loss = 4.11 (2221.5 images/sec; 0.045 sec/batch)
------------what is loss : 4.029538154602051
-2019-12-06 06:56:33.599834: step 70, loss = 4.03 (2214.7 images/sec; 0.045 sec/batch)
------------what is loss : 3.9490160942077637
-2019-12-06 06:56:33.670014: step 80, loss = 3.95 (2240.1 images/sec; 0.045 sec/batch)
------------what is loss : 3.870082378387451
-2019-12-06 06:56:33.753006: step 90, loss = 3.87 (1740.5 images/sec; 0.057 sec/batch)
------------what is loss : 3.7927193641662598
-2019-12-06 06:56:33.823535: step 100, loss = 3.79 (2224.8 images/sec; 0.045 sec/batch)
------------what is loss : 3.7168993949890137
-2019-12-06 06:56:33.894537: step 110, loss = 3.72 (2195.7 images/sec; 0.046 sec/batch)
------------what is loss : 3.642594575881958
-2019-12-06 06:56:33.964983: step 120, loss = 3.64 (2233.5 images/sec; 0.045 sec/batch)
------------what is loss : 3.5697758197784424
-2019-12-06 06:56:34.035515: step 130, loss = 3.57 (2229.5 images/sec; 0.045 sec/batch)
------------what is loss : 3.4984116554260254
-2019-12-06 06:56:34.106251: step 140, loss = 3.50 (2232.0 images/sec; 0.045 sec/batch)
------------what is loss : 3.4284744262695312
-2019-12-06 06:56:34.176237: step 150, loss = 3.43 (2240.0 images/sec; 0.045 sec/batch)
------------what is loss : 3.3599355220794678
-2019-12-06 06:56:34.246439: step 160, loss = 3.36 (2233.3 images/sec; 0.045 sec/batch)
------------what is loss : 3.2927660942077637
-2019-12-06 06:56:34.316508: step 170, loss = 3.29 (2231.7 images/sec; 0.045 sec/batch)
------------what is loss : 3.2269399166107178
-2019-12-06 06:56:34.387134: step 180, loss = 3.23 (2231.3 images/sec; 0.045 sec/batch)
------------what is loss : 3.162431240081787
-2019-12-06 06:56:34.458350: step 190, loss = 3.16 (2233.5 images/sec; 0.045 sec/batch)
------------what is loss : 3.099210023880005
-2019-12-06 06:56:34.541173: step 200, loss = 3.10 (1727.8 images/sec; 0.058 sec/batch)
------------what is loss : 3.037256956100464
-2019-12-06 06:56:34.610924: step 210, loss = 3.04 (2235.0 images/sec; 0.045 sec/batch)
------------what is loss : 2.9765357971191406
-2019-12-06 06:56:34.682388: step 220, loss = 2.98 (2236.3 images/sec; 0.045 sec/batch)
------------what is loss : 2.917032480239868
-2019-12-06 06:56:34.752492: step 230, loss = 2.92 (2225.2 images/sec; 0.045 sec/batch)
------------what is loss : 2.8587186336517334
-2019-12-06 06:56:34.822073: step 240, loss = 2.86 (2233.7 images/sec; 0.045 sec/batch)
------------what is loss : 2.8015825748443604
-2019-12-06 06:56:34.892147: step 250, loss = 2.80 (2225.2 images/sec; 0.045 sec/batch)
------------what is loss : 2.745570659637451
-2019-12-06 06:56:34.962333: step 260, loss = 2.75 (2224.8 images/sec; 0.045 sec/batch)
------------what is loss : 2.690706968307495
-2019-12-06 06:56:35.032673: step 270, loss = 2.69 (2231.3 images/sec; 0.045 sec/batch)
------------what is loss : 2.636929750442505
-2019-12-06 06:56:35.103272: step 280, loss = 2.64 (2217.8 images/sec; 0.045 sec/batch)
------------what is loss : 2.5842580795288086
-2019-12-06 06:56:35.173481: step 290, loss = 2.58 (2231.4 images/sec; 0.045 sec/batch)
------------what is loss : 2.53261399269104
-2019-12-06 06:56:35.244247: step 300, loss = 2.53 (2219.9 images/sec; 0.045 sec/batch)
------------what is loss : 2.4819626808166504
-2019-12-06 06:56:35.314444: step 310, loss = 2.48 (2228.9 images/sec; 0.045 sec/batch)
+Accuracy :  0.04229999966919422
+-----------what is loss : 5.162605285644531
+2019-12-11 03:03:57.097540: step 0, loss = 5.16 (1200.6 images/sec; 0.083 sec/batch)
+-----------what is loss : 4.976321220397949
+2019-12-11 03:03:57.259402: step 10, loss = 4.98 (2841.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 4.823118209838867
+2019-12-11 03:03:57.393367: step 20, loss = 4.82 (2903.1 images/sec; 0.034 sec/batch)
+-----------what is loss : 4.564476013183594
+2019-12-11 03:03:57.528324: step 30, loss = 4.56 (2860.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 4.346807479858398
+2019-12-11 03:03:57.664656: step 40, loss = 4.35 (2843.6 images/sec; 0.035 sec/batch)
+-----------what is loss : 4.067380905151367
+2019-12-11 03:03:57.797946: step 50, loss = 4.07 (2896.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.8664767742156982
+2019-12-11 03:03:57.932349: step 60, loss = 3.87 (2897.1 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.465466260910034
+2019-12-11 03:03:58.069071: step 70, loss = 3.47 (2855.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.1163172721862793
+2019-12-11 03:03:58.203977: step 80, loss = 3.12 (2849.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.17694091796875
+2019-12-11 03:03:58.339147: step 90, loss = 3.18 (2877.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.946763753890991
+2019-12-11 03:03:58.472973: step 100, loss = 2.95 (2833.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.870781183242798
+2019-12-11 03:03:58.607657: step 110, loss = 2.87 (2885.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.7125842571258545
+2019-12-11 03:03:58.740983: step 120, loss = 2.71 (2867.1 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.7820916175842285
+2019-12-11 03:03:58.877179: step 130, loss = 2.78 (2869.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.6816773414611816
+2019-12-11 03:03:59.011808: step 140, loss = 2.68 (2859.5 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.462918281555176
+2019-12-11 03:03:59.144426: step 150, loss = 2.46 (2889.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.6417105197906494
+2019-12-11 03:03:59.279022: step 160, loss = 2.64 (2834.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.335509777069092
+2019-12-11 03:03:59.425897: step 170, loss = 2.34 (2173.8 images/sec; 0.046 sec/batch)
+-----------what is loss : 2.4691224098205566
+2019-12-11 03:03:59.560757: step 180, loss = 2.47 (2823.6 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.349360466003418
+2019-12-11 03:03:59.695346: step 190, loss = 2.35 (2793.2 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.2565088272094727
+2019-12-11 03:03:59.829037: step 200, loss = 2.26 (2832.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.3729732036590576
+2019-12-11 03:03:59.963790: step 210, loss = 2.37 (2856.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.201507568359375
+2019-12-11 03:04:00.100869: step 220, loss = 2.20 (2814.5 images/sec; 0.036 sec/batch)
+-----------what is loss : 1.9999258518218994
+2019-12-11 03:04:00.234722: step 230, loss = 2.00 (2828.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.0104405879974365
+2019-12-11 03:04:00.370766: step 240, loss = 2.01 (2761.8 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.03006649017334
+2019-12-11 03:04:00.505012: step 250, loss = 2.03 (2841.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 1.8315420150756836
+2019-12-11 03:04:00.701023: step 260, loss = 1.83 (1041.0 images/sec; 0.096 sec/batch)
+-----------what is loss : 5.588593482971191
+2019-12-11 03:04:00.839867: step 270, loss = 5.59 (2824.7 images/sec; 0.035 sec/batch)
+-----------what is loss : 4.162094593048096
+2019-12-11 03:04:00.973507: step 280, loss = 4.16 (2844.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.8567276000976562
+2019-12-11 03:04:01.108602: step 290, loss = 3.86 (2875.5 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.7529144287109375
+2019-12-11 03:04:01.243474: step 300, loss = 3.75 (2868.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.733776807785034
+2019-12-11 03:04:01.380207: step 310, loss = 3.73 (2826.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.701794147491455
+2019-12-11 03:04:01.524668: step 320, loss = 3.70 (2217.8 images/sec; 0.045 sec/batch)
+-----------what is loss : 3.6199047565460205
+2019-12-11 03:04:01.659537: step 330, loss = 3.62 (2800.2 images/sec; 0.036 sec/batch)
+-----------what is loss : 3.5736961364746094
+2019-12-11 03:04:01.793713: step 340, loss = 3.57 (2867.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.561011791229248
+2019-12-11 03:04:01.928269: step 350, loss = 3.56 (2853.1 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.532501697540283
+2019-12-11 03:04:02.064717: step 360, loss = 3.53 (2807.7 images/sec; 0.036 sec/batch)
+-----------what is loss : 3.508354663848877
+2019-12-11 03:04:02.199817: step 370, loss = 3.51 (2856.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.4883642196655273
+2019-12-11 03:04:02.334453: step 380, loss = 3.49 (2936.9 images/sec; 0.034 sec/batch)
+-----------what is loss : 3.4474475383758545
+2019-12-11 03:04:02.470239: step 390, loss = 3.45 (2819.6 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.4328975677490234
+2019-12-11 03:04:02.605963: step 400, loss = 3.43 (2857.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.3923628330230713
+2019-12-11 03:04:02.739113: step 410, loss = 3.39 (2896.5 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.373461961746216
+2019-12-11 03:04:02.874550: step 420, loss = 3.37 (2867.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.318127155303955
+2019-12-11 03:04:03.009049: step 430, loss = 3.32 (2823.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.3142404556274414
+2019-12-11 03:04:03.145337: step 440, loss = 3.31 (2936.1 images/sec; 0.034 sec/batch)
+-----------what is loss : 3.297780752182007
+2019-12-11 03:04:03.281629: step 450, loss = 3.30 (2825.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.2628984451293945
+2019-12-11 03:04:03.418006: step 460, loss = 3.26 (2910.7 images/sec; 0.034 sec/batch)
+-----------what is loss : 3.234030246734619
+2019-12-11 03:04:03.552546: step 470, loss = 3.23 (2845.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.21412992477417
+2019-12-11 03:04:03.687827: step 480, loss = 3.21 (2844.1 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.1909327507019043
+2019-12-11 03:04:03.824605: step 490, loss = 3.19 (2857.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.1678385734558105
+2019-12-11 03:04:03.959064: step 500, loss = 3.17 (2871.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.1323132514953613
+2019-12-11 03:04:04.094027: step 510, loss = 3.13 (2823.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.140930652618408
+2019-12-11 03:04:04.229353: step 520, loss = 3.14 (2842.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.110513925552368
+2019-12-11 03:04:04.419589: step 530, loss = 3.11 (2798.6 images/sec; 0.036 sec/batch)
+-----------what is loss : 3.122468948364258
+2019-12-11 03:04:04.557500: step 540, loss = 3.12 (2874.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.0728611946105957
+2019-12-11 03:04:04.693394: step 550, loss = 3.07 (2858.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.039550542831421
+2019-12-11 03:04:04.829156: step 560, loss = 3.04 (2885.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.0244808197021484
+2019-12-11 03:04:04.963382: step 570, loss = 3.02 (2843.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 3.006107807159424
+2019-12-11 03:04:05.101354: step 580, loss = 3.01 (2636.4 images/sec; 0.038 sec/batch)
+-----------what is loss : 3.007185697555542
+2019-12-11 03:04:05.237067: step 590, loss = 3.01 (2848.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.9913289546966553
+2019-12-11 03:04:05.370614: step 600, loss = 2.99 (2870.7 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.969942569732666
+2019-12-11 03:04:05.505513: step 610, loss = 2.97 (2780.6 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.940061569213867
+2019-12-11 03:04:05.639958: step 620, loss = 2.94 (2870.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.947725772857666
+2019-12-11 03:04:05.776473: step 630, loss = 2.95 (2816.7 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.9146270751953125
+2019-12-11 03:04:05.910616: step 640, loss = 2.91 (2850.6 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.9077560901641846
+2019-12-11 03:04:06.046768: step 650, loss = 2.91 (2769.0 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.8914408683776855
+2019-12-11 03:04:06.182365: step 660, loss = 2.89 (2813.9 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.864169120788574
+2019-12-11 03:04:06.318782: step 670, loss = 2.86 (2823.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.860285520553589
+2019-12-11 03:04:06.455655: step 680, loss = 2.86 (2818.7 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.8328301906585693
+2019-12-11 03:04:06.593878: step 690, loss = 2.83 (2864.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.824892520904541
+2019-12-11 03:04:06.729197: step 700, loss = 2.82 (2841.7 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.819605827331543
+2019-12-11 03:04:06.864782: step 710, loss = 2.82 (2849.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.796635150909424
+2019-12-11 03:04:06.998678: step 720, loss = 2.80 (2850.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.805982828140259
+2019-12-11 03:04:07.133600: step 730, loss = 2.81 (2863.6 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.784040927886963
+2019-12-11 03:04:07.268983: step 740, loss = 2.78 (2868.6 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.7639200687408447
+2019-12-11 03:04:07.403147: step 750, loss = 2.76 (2859.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.7723398208618164
+2019-12-11 03:04:07.537493: step 760, loss = 2.77 (2851.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.7640509605407715
+2019-12-11 03:04:07.672000: step 770, loss = 2.76 (2821.6 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.7487754821777344
+2019-12-11 03:04:07.807209: step 780, loss = 2.75 (2859.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.744218587875366
+2019-12-11 03:04:07.995888: step 790, loss = 2.74 (2856.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.7165205478668213
+2019-12-11 03:04:08.129352: step 800, loss = 2.72 (2876.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.7173917293548584
+2019-12-11 03:04:08.264456: step 810, loss = 2.72 (2824.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.695516347885132
+2019-12-11 03:04:08.408099: step 820, loss = 2.70 (2317.2 images/sec; 0.043 sec/batch)
+-----------what is loss : 2.699018955230713
+2019-12-11 03:04:08.543116: step 830, loss = 2.70 (2849.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.6943349838256836
+2019-12-11 03:04:08.678302: step 840, loss = 2.69 (2844.5 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.664046287536621
+2019-12-11 03:04:08.812121: step 850, loss = 2.66 (2876.6 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.6606240272521973
+2019-12-11 03:04:08.945661: step 860, loss = 2.66 (2838.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.652083158493042
+2019-12-11 03:04:09.081111: step 870, loss = 2.65 (2837.5 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.6425585746765137
+2019-12-11 03:04:09.219682: step 880, loss = 2.64 (2729.6 images/sec; 0.037 sec/batch)
+-----------what is loss : 2.6254589557647705
+2019-12-11 03:04:09.355684: step 890, loss = 2.63 (2856.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.633790969848633
+2019-12-11 03:04:09.489618: step 900, loss = 2.63 (2870.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.6183738708496094
+2019-12-11 03:04:09.623563: step 910, loss = 2.62 (2876.1 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.6150996685028076
+2019-12-11 03:04:09.758967: step 920, loss = 2.62 (2890.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.621514081954956
+2019-12-11 03:04:09.893183: step 930, loss = 2.62 (2827.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.6062405109405518
+2019-12-11 03:04:10.026290: step 940, loss = 2.61 (2891.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.599302291870117
+2019-12-11 03:04:10.160953: step 950, loss = 2.60 (2832.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.593172550201416
+2019-12-11 03:04:10.295226: step 960, loss = 2.59 (2860.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5792980194091797
+2019-12-11 03:04:10.428899: step 970, loss = 2.58 (2869.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5689711570739746
+2019-12-11 03:04:10.563102: step 980, loss = 2.57 (2852.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.6179091930389404
+2019-12-11 03:04:10.698240: step 990, loss = 2.62 (2822.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5665624141693115
+2019-12-11 03:04:10.833277: step 1000, loss = 2.57 (2822.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.549274444580078
+2019-12-11 03:04:11.014525: step 1010, loss = 2.55 (2787.2 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.5488150119781494
+2019-12-11 03:04:11.150102: step 1020, loss = 2.55 (2834.5 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5882792472839355
+2019-12-11 03:04:11.286555: step 1030, loss = 2.59 (2855.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5569276809692383
+2019-12-11 03:04:11.420774: step 1040, loss = 2.56 (2852.5 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5601189136505127
+2019-12-11 03:04:11.608990: step 1050, loss = 2.56 (2874.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5493905544281006
+2019-12-11 03:04:11.744855: step 1060, loss = 2.55 (2839.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5612096786499023
+2019-12-11 03:04:11.879495: step 1070, loss = 2.56 (2845.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5509042739868164
+2019-12-11 03:04:12.014149: step 1080, loss = 2.55 (2829.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5481722354888916
+2019-12-11 03:04:12.149578: step 1090, loss = 2.55 (2849.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5668163299560547
+2019-12-11 03:04:12.283394: step 1100, loss = 2.57 (2851.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5593385696411133
+2019-12-11 03:04:12.418757: step 1110, loss = 2.56 (2768.2 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.5465619564056396
+2019-12-11 03:04:12.554212: step 1120, loss = 2.55 (2859.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5487446784973145
+2019-12-11 03:04:12.688581: step 1130, loss = 2.55 (2846.6 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5536246299743652
+2019-12-11 03:04:12.823898: step 1140, loss = 2.55 (2846.7 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5674729347229004
+2019-12-11 03:04:12.967900: step 1150, loss = 2.57 (2221.2 images/sec; 0.045 sec/batch)
+-----------what is loss : 2.552079439163208
+2019-12-11 03:04:13.103630: step 1160, loss = 2.55 (2793.8 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.5546505451202393
+2019-12-11 03:04:13.238819: step 1170, loss = 2.55 (2853.1 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.555673837661743
+2019-12-11 03:04:13.373949: step 1180, loss = 2.56 (2795.8 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.551251173019409
+2019-12-11 03:04:13.508437: step 1190, loss = 2.55 (2854.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5487277507781982
+2019-12-11 03:04:13.643493: step 1200, loss = 2.55 (2867.5 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5503337383270264
+2019-12-11 03:04:13.777936: step 1210, loss = 2.55 (2864.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.537053108215332
+2019-12-11 03:04:13.913338: step 1220, loss = 2.54 (2863.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.548105239868164
+2019-12-11 03:04:14.048417: step 1230, loss = 2.55 (2858.8 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5424623489379883
+2019-12-11 03:04:14.182642: step 1240, loss = 2.54 (2833.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.558105945587158
+2019-12-11 03:04:14.318930: step 1250, loss = 2.56 (2812.9 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.5511069297790527
+2019-12-11 03:04:14.453617: step 1260, loss = 2.55 (2798.9 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.540013313293457
+2019-12-11 03:04:14.587660: step 1270, loss = 2.54 (2853.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.544618606567383
+2019-12-11 03:04:14.722745: step 1280, loss = 2.54 (2814.1 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.5359678268432617
+2019-12-11 03:04:14.857243: step 1290, loss = 2.54 (2830.5 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5380308628082275
+2019-12-11 03:04:14.992130: step 1300, loss = 2.54 (2869.1 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5437331199645996
+2019-12-11 03:04:15.181003: step 1310, loss = 2.54 (1133.7 images/sec; 0.088 sec/batch)
+-----------what is loss : 2.5541744232177734
+2019-12-11 03:04:15.317547: step 1320, loss = 2.55 (2810.1 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.543671131134033
+2019-12-11 03:04:15.453821: step 1330, loss = 2.54 (2824.9 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.54307222366333
+2019-12-11 03:04:15.588080: step 1340, loss = 2.54 (2856.0 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5388059616088867
+2019-12-11 03:04:15.724053: step 1350, loss = 2.54 (2811.7 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.5477242469787598
+2019-12-11 03:04:15.858689: step 1360, loss = 2.55 (2833.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5372164249420166
+2019-12-11 03:04:15.993837: step 1370, loss = 2.54 (2807.7 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.5337774753570557
+2019-12-11 03:04:16.129112: step 1380, loss = 2.53 (2841.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5383689403533936
+2019-12-11 03:04:16.263715: step 1390, loss = 2.54 (2847.1 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5454835891723633
+2019-12-11 03:04:16.398045: step 1400, loss = 2.55 (2836.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5426223278045654
+2019-12-11 03:04:16.533751: step 1410, loss = 2.54 (2839.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5319197177886963
+2019-12-11 03:04:16.670261: step 1420, loss = 2.53 (2844.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.518200159072876
+2019-12-11 03:04:16.805356: step 1430, loss = 2.52 (2843.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.529304265975952
+2019-12-11 03:04:16.940665: step 1440, loss = 2.53 (2833.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5324509143829346
+2019-12-11 03:04:17.074556: step 1450, loss = 2.53 (2866.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.530627489089966
+2019-12-11 03:04:17.209111: step 1460, loss = 2.53 (2880.2 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5374908447265625
+2019-12-11 03:04:17.343673: step 1470, loss = 2.54 (2853.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.5450329780578613
+2019-12-11 03:04:17.478530: step 1480, loss = 2.55 (2783.4 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.523611545562744
+2019-12-11 03:04:17.616876: step 1490, loss = 2.52 (2798.5 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.529578924179077
+2019-12-11 03:04:17.755634: step 1500, loss = 2.53 (2737.5 images/sec; 0.037 sec/batch)
+-----------what is loss : 2.5353586673736572
+2019-12-11 03:04:17.891458: step 1510, loss = 2.54 (2804.4 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.548619031906128
+2019-12-11 03:04:18.027029: step 1520, loss = 2.55 (2795.8 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.5420491695404053
+2019-12-11 03:04:18.161159: step 1530, loss = 2.54 (2816.3 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.5361673831939697
+2019-12-11 03:04:18.297168: step 1540, loss = 2.54 (2855.3 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.525542974472046
+2019-12-11 03:04:18.432745: step 1550, loss = 2.53 (2793.7 images/sec; 0.036 sec/batch)
+-----------what is loss : 2.535367727279663
+2019-12-11 03:04:18.567423: step 1560, loss = 2.54 (2850.4 images/sec; 0.035 sec/batch)
+-----------what is loss : 2.525663375854492
+2019-12-11 03:04:18.767543: step 1570, loss = 2.53 (1003.8 images/sec; 0.100 sec/batch)
+-----------what is loss : 2.540252685546875
+2019-12-11 03:04:18.901929: step 1580, loss = 2.54 (2887.9 images/sec; 0.035 sec/batch)

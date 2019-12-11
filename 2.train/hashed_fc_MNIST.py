@@ -19,7 +19,8 @@ import sys
 import numpy as np
 sys.path.append('../requirement/')
 #from kmeans import kmeans_cluster
-from XXhash import XXhash
+from T2_XXhash import XXhash
+from T2_XORSHIFT import XORShift
 
 def _variable_on_device(name, shape, initializer, trainable=True):
   """Helper to create a Variable.
@@ -112,7 +113,7 @@ class hashed():
 			print("debug1.................................................add_forward__graph : end")
 			self._add_loss_graph()
 			print("debug2.................................................add_loss_graph : end")
-			if hashed==True :
+			if hashed=="True" :
 				self._add_hash_train_graph()
 			else:
 				self._add_train_graph()
@@ -146,12 +147,13 @@ class hashed():
 			assert tf.gfile.Exists(mc.PRETRAINED_MODEL_PATH), 'Cannot find pretrained model at the given path:' '  {}'.format(mc.PRETRAINED_MODEL_PATH)
 		self.caffemodel_weight = joblib.load(mc.PRETRAINED_MODEL_PATH)
 
-		if hashed==True:
-			dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=98000, blocked=True, blocked_param=64)
+		print("TK:::True????", hashed)
+		if hashed=="True":
+			print("TK:::True????")
+			dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=65536, blocked=False, blocked_param=64)
 
-			self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=12500, blocked=True, blocked_param=5)
-		else :
-			
+			self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=1250, blocked=False, blocked_param=5)
+		else :	
 			dense1 = self._fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, relu=True)
 
 			self.preds = self._fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False)
@@ -347,6 +349,7 @@ class hashed():
 					try:
 						# check the size before layout transf hiddens-1000, dim 784
 						assert kernel_val.shape == (hiddens, dim), 'kernel shape error at {}'.format(layer_name)
+						'''
 						kernel_val = np.reshape(
 							np.transpose(
 								np.reshape(
@@ -357,7 +360,8 @@ class hashed():
 							), # H x W x C x O
 							(dim, -1)
 						) # (H*W*C) x O
-
+						'''
+						kernel_val = np.transpose(kernel_val, (1,0))
 						# check the size after layout transform
 						assert kernel_val.shape == (dim, hiddens), \
             		    	'kernel shape error at {}'.format(layer_name)
@@ -376,13 +380,15 @@ class hashed():
 						use_pretrained_param = False
 						print ('Shape of the pretrained parameter of {} does not match, ' 'use randomly initialized parameter'.format(layer_name))
 
-			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param)
+			#kmeans = XXhash(Conv_FC="FC", cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param)
+			kmeans = XORShift(Conv_FC="FC", cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param)
 			self.hash_index[layer_name] = kmeans.label();
 			self.hash_num[layer_name] = kmeans.num_centro();
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
 
 			if use_pretrained_param:
-				print("1.TKTKTKTK:::::::", kernel_val)
+				print("1.TKTKTKTK:::::::", self.hash_index[layer_name])
+				print("1.TKTKTKTK:::::::", kmeans.centro())
 				print("2.TKTKTKTK:::::::", kmeans.weight())
 				kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
 				bias_init = tf.constant(bias_val, dtype=tf.float32)

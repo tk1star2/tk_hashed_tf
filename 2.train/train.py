@@ -33,7 +33,7 @@ tf.app.flags.DEFINE_string('dataset', 'MNIST', """Currently only support MNIST d
 tf.app.flags.DEFINE_string('train_dir', './MNIST/train',
                             """Directory where to write event logs """
                             """and checkpoint.""")
-tf.app.flags.DEFINE_string('net', 'hashedNet',
+tf.app.flags.DEFINE_string('net', 'hashed_fc_MNIST',
                            """Neural net architecture. """)
 tf.app.flags.DEFINE_string('pretrained_model_path', '../1.pretrain/MNIST/MNIST.pkl',
                            """Path to the pretrained model.""")
@@ -105,7 +105,7 @@ def train():
 
 		#-----------------------------------------------------------------
 		@jit(nopython=True, cache=True)
-		def TK_TRANSFORM(grad, hash_num, hash_index):
+		def TK_TRANSFORM_FC(grad, hash_num, hash_index):
 
 			temp_centroid = np.zeros(hash_num)
 			temp_centroid_num = np.zeros(hash_num)
@@ -125,6 +125,32 @@ def train():
 			for i in xrange(grad.shape[0]):
 				for i2 in xrange(grad.shape[1]):
 					temp_grad[i][i2]=temp_centroid[hash_index[i][i2]]
+			return temp_grad;
+		@jit(nopython=True, cache=True)
+		def TK_TRANSFORM_CONV(grad, hash_num, hash_index):
+
+			temp_centroid = np.zeros(hash_num)
+			temp_centroid_num = np.zeros(hash_num)
+			temp_grad = np.zeros((grad.shape[0],grad.shape[1], grad.shape[2], grad.shape[3]))
+			#tk!! JUST like STEP2
+			for i in xrange(grad.shape[0]):
+				for i2 in xrange(grad.shape[1]):
+					for i3 in xrange(grad.shape[2]):
+						for i4 in xrange(grad.shape[3]):
+							temp_centroid[hash_index[i][i2][i3][i4]] += grad[i][i2][i3][i4];
+							temp_centroid_num[hash_index[i][i2][i3][i4]] += 1;
+
+			for i in xrange(hash_num):
+				if temp_centroid_num[i] != 0:
+					temp_centroid[i] /= temp_centroid_num[i];
+
+			#tk!! JUST like STEP3
+			#return temp_centroid[hash_index];
+			for i in xrange(grad.shape[0]):
+				for i2 in xrange(grad.shape[1]):
+					for i3 in xrange(grad.shape[2]):
+						for i4 in xrange(grad.shape[3]):
+							temp_grad[i][i2][i3][i4]=temp_centroid[hash_index[i][i2][i3][i4]]
 			return temp_grad;
 		#-----------------------------------------------------------------
 		def _load_data(load_to_placeholder=True):
@@ -232,22 +258,35 @@ def train():
 			#**********************main function*******************************
 			if mc.NUM_THREAD > 0: #4
 				#
-				if FLAGS.hashed == True: 
-					print("===================================++++WRONG===============================")
+				if FLAGS.hashed == "True": 
 					loss_value = sess.run(model.loss, options=run_options)
 					grads = sess.run([grad for (grad,var) in model.grads_vars ], options=run_options)
 
 					feed_dict = {}
 					for i in xrange(len(model.grads_placeholder)):
-						if grads[i].ndim != 2 :
-							feed_dict[model.grads_placeholder[i][0]] = grads[i];
+						Lindex = model.grads_placeholder[i][0];
+						Lname = model.grads_placeholder[i][1].name.split('/')[0];
+						Ltype = model.grads_placeholder[i][1].name.split('/')[1].split(':')[0];
+
+						#print("model.grads_placeholder[i][0] is {} and [1] is {} and dimension is {}".format(model.grads_placeholder[i][0].name, model.grads_placeholder[i][1].name, grads[i].ndim))
+						#print("[1] is {} and {}, {}".format(Lname[:-1], Ltype, grads[i].shape))
+
+						# "dense"
+						if Ltype != "weights" :
+							feed_dict[Lindex] = grads[i];
 							continue;
 	
-						if str(model.grads_placeholder[i][1].name.split('/')[0]) in model.hash_num.keys():
-							hash_num = model.hash_num[model.grads_placeholder[i][1].name.split('/')[0]];
-							hash_index = model.hash_index[model.grads_placeholder[i][1].name.split('/')[0]];
-							#print("*********************hashnum is{}******************".format(type(hash_num)))
-							feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], hash_num, hash_index);
+						if str(Lname) in model.hash_num.keys():
+							if Lname[:-1]=="dense" :
+								hash_num = model.hash_num[Lname];
+								hash_index = model.hash_index[Lname];
+								#print("*********************hashnum is{}******************".format(type(hash_num)))
+								feed_dict[Lindex] = TK_TRANSFORM_FC(grads[i], hash_num, hash_index);
+							else :
+								hash_num = model.hash_num[Lname];
+								hash_index = model.hash_index[Lname];
+								#print("*********************hashnum is{}******************".format(type(hash_num)))
+								feed_dict[Lindex] = TK_TRANSFORM_CONV(grads[i], hash_num, hash_index);
 
 						else:
 							feed_dict[model.grads_placeholder[i][0]] = grads[i];
@@ -298,7 +337,7 @@ def train():
 		#																		   #
 		#***************************************************************************
 
-		if FLAGS.hashed == True: 
+		if FLAGS.hashed == "True": 
 			save_tuple = {};
 			save_tuple2 = {};
 			save_temp = [];	
@@ -348,13 +387,27 @@ def train():
 
 
 			import pickle
+			if FLAGS.net == 'hashed_fc_MNIST':
+				with open(os.path.join(FLAGS.train_dir, 'MNIST_FC.pkl'), 'wb') as f:
+					pickle.dump(save_tuple, f);
 
+				with open(os.path.join(FLAGS.train_dir, 'MNIST_FC_INFO.pkl'), 'wb') as f:
+					pickle.dump(save_tuple2, f);
+
+			elif FLAGS.net == 'hashed_conv_MNIST':
+				with open(os.path.join(FLAGS.train_dir, 'MNIST_CONV.pkl'), 'wb') as f:
+					pickle.dump(save_tuple, f);
+
+				with open(os.path.join(FLAGS.train_dir, 'MNIST_CONV_INFO.pkl'), 'wb') as f:
+					pickle.dump(save_tuple2, f);
+
+			elif FLAGS.net == 'hashed_conv_IMGNET':
+				with open(os.path.join(FLAGS.train_dir, 'IMGNET_CONV.pkl'), 'wb') as f:
+					pickle.dump(save_tuple, f);
+
+				with open(os.path.join(FLAGS.train_dir, 'IMGNET_CONV_INFO.pkl'), 'wb') as f:
+					pickle.dump(save_tuple2, f);
 			#os.getcwd()
-			with open(os.path.join(FLAGS.train_dir, 'MNIST_TRAIN.pkl'), 'wb') as f:
-				pickle.dump(save_tuple, f);
-
-			with open(os.path.join(FLAGS.train_dir, 'MNIST_TRAIN_INFO.pkl'), 'wb') as f:
-				pickle.dump(save_tuple2, f);
 	
 
 #---------------------------------------------------------------------------------
