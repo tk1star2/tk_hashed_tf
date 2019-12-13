@@ -62,13 +62,13 @@ done
 
 case "$NET" in 
   "hashed_fc_MNIST")
-    export PRETRAINED_MODEL_PATH="../1.pretrain/MNIST/MNIST_fc.pkl" #data : variable, 
+    export PRETRAINED_MODEL_PATH="../1.pretrain/MNIST/MNIST_FC.pkl" #data : variable, 
     ;;
   "hashed_conv_MNIST")
-    export PRETRAINED_MODEL_PATH="../1.pretrain/MNIST/MNIST_conv.pkl" #data : variable, 
+    export PRETRAINED_MODEL_PATH="../1.pretrain/MNIST/MNIST_CONV.pkl" #data : variable, 
     ;;
   "hashed_conv_IMGNET")
-    export PRETRAINED_MODEL_PATH="../1.pretrain/MNIST/MNIST.pkl" #data : variable, 
+    export PRETRAINED_MODEL_PATH="../1.pretrain/MNIST/IMGNET_CONV.pkl" #data : variable, 
     ;;
   *)
     echo "net architecture not supported."

@@ -3,6 +3,8 @@
 export NET="hashed"
 export GPUID=0
 export TRAIN_DIR="./MNIST"
+export DATA_SET="MNIST"
+export HASHED=True
 
 if [ $# -eq 0 ]
 then
@@ -28,6 +30,16 @@ while test $# -gt 0; do
       echo "-train_dir                directory for training logs"
       exit 0
       ;;
+    -data_set)
+      export DATA_SET="$2"
+      shift
+      shift
+      ;;
+    -train_dir)
+      export TRAIN_DIR="$2"
+      shift
+      shift
+      ;;
     -net)
       export NET="$2"
       shift
@@ -38,8 +50,8 @@ while test $# -gt 0; do
       shift
       shift
       ;;
-    -train_dir)
-      export TRAIN_DIR="$2"
+    -hashed)
+      export HASHED="$2"
       shift
       shift
       ;;
@@ -50,11 +62,17 @@ while test $# -gt 0; do
 done
 
 case "$NET" in 
-  "hashed")
-    export PRETRAINED_MODEL_PATH="../2.train/MNIST/train/MNIST_TRAIN.pkl" #data : variable, 
+  "hashed_fc_MNIST")
+    export PRETRAINED_MODEL_PATH="../2.train/MNIST/train/MNIST_FC.pkl" #data : variable, 
+    export PRETRAINED_INFO_PATH="../2.train/MNIST/train/MNIST_FC_INFO.pkl" #data : variable, 
     ;;
-  "hashed-LSM")
-    export PRETRAINED_MODEL_PATH="./data/ResNet/ResNet-50-weights.pkl"
+  "hashed_conv_MNIST")
+    export PRETRAINED_MODEL_PATH="../2.train/MNIST/train/MNIST_CONV.pkl" #data : variable, 
+    export PRETRAINED_INFO_PATH="../2.train/MNIST/train/MNIST_CONV_INFO.pkl" #data : variable, 
+    ;;
+  "hashed_conv_IMGNET")
+    export PRETRAINED_MODEL_PATH="../2.train/MNIST/train/IMGNET_CONV.pkl" #data : variable, 
+    export PRETRAINED_INFO_PATH="../2.train/MNIST/train/IMGNET_CONV_INFO.pkl" #data : variable, 
     ;;
   *)
     echo "net architecture not supported."
@@ -65,10 +83,10 @@ esac
 
 python3 train.py \
   --dataset=MNIST \
-  --image_set=train \
   --train_dir="$TRAIN_DIR/train" \
   --net=$NET \
   --pretrained_model_path=$PRETRAINED_MODEL_PATH \
+  --pretrained_info_path=$PRETRAINED_INFO_PATH \
   --gpu=$GPUID\
-  --hashed=True
+  --hashed=$HASHED
 

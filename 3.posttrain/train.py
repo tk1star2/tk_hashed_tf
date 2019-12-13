@@ -12,9 +12,7 @@ import time
 from datetime import datetime
 
 #sys.path.append('..')
-import pretrain 
 from config import base_model_config as config
-from hashed import hashed
 from six.moves import xrange
 
 from numba import jit
@@ -32,23 +30,25 @@ from utils.util import sparse_to_dense, bgr_to_rgb, bbox_transform
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string('dataset', 'MNIST', """Currently only support MNIST? dataset.""")
-tf.app.flags.DEFINE_string('image_set', 'train',
-                           """ Can be train, trainval, val, or test""")
 tf.app.flags.DEFINE_string('train_dir', './MNIST/train',
                             """Directory where to write event logs """
                             """and checkpoint.""")
-tf.app.flags.DEFINE_string('net', 'hashedNet',
+tf.app.flags.DEFINE_string('net', 'hashed_fc_MNIST',
                            """Neural net architecture. """)
-tf.app.flags.DEFINE_string('pretrained_model_path', '../2.train/MNIST/train/MNIST_TRAIN.pkl',
+tf.app.flags.DEFINE_string('pretrained_model_path', '../2.train/MNIST/train/MNIST.pkl',
                            """Path to the pretrained model.""")
-tf.app.flags.DEFINE_string('pretrained_info_path', '../2.train/MNIST/train/MNIST_TRAIN_INFO.pkl',
+tf.app.flags.DEFINE_string('pretrained_info_path', '../2.train/MNIST/train/MNIST_INFO.pkl',
                            """Path to the pretrained model.""")
 tf.app.flags.DEFINE_string('gpu', '0', """gpu id.""")
 tf.app.flags.DEFINE_string('hashed', 'True', """if it is hashing""")
 
 
 #---------------------------------------------------------------------------------
-def predataset():
+def IMGNET():
+	MNIST_PATH='../0.data/MNIST'
+	VALIDATION_SIZE=5000
+def MNIST():
+	import MNIST as pretrain
 	MNIST_PATH='../0.data/MNIST'
 	VALIDATION_SIZE=5000
 
@@ -80,24 +80,41 @@ def train():
 	os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu
 
 	with tf.Graph().as_default():
-		assert FLAGS.net == 'hashed' or FLAGS.net == 'hashed2', 'Selected neural net architecture not supported: {}'.format(FLAGS.net)
-		if FLAGS.net == 'hashed':
+		assert FLAGS.net == 'hashed_fc_MNIST' or FLAGS.net == 'hashed_conv_MNIST' or FLAGS.net == 'hashed_conv_IMGNET', 'Selected neural net architecture not supported: {}'.format(FLAGS.net)
+		if FLAGS.hashed=="True":
+			hashornot = True;
+		else :
+			hashornot = False;
+
+		if FLAGS.net == 'hashed_fc_MNIST':
+			from hashed_fc_MNIST import hashed
 			mc = config() # 1.config.py
 			mc.IS_TRAINING = True
 			mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
 			mc.PRETRAINED_INFO_PATH = FLAGS.pretrained_info_path
-			model = hashed(mc, gpu_id=FLAGS.gpu, hashed=FLAGS.hashed) # 2.hashed.py
-		elif FLAGS.net == 'hashed2':
+			model = hashed(mc, gpu_id=FLAGS.gpu, hashed=hashornot) # 2.hashed.py
+			data_sets = MNIST()
+		elif FLAGS.net == 'hashed_conv_MNIST':
+			from hashed_conv_MNIST import hashed
 			mc = config() # 1.config.py
 			mc.IS_TRAINING = True
 			mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
-			model = hashed(mc) # 2.hashed.py
+			mc.PRETRAINED_INFO_PATH = FLAGS.pretrained_info_path
+			model = hashed(mc, gpu_id=FLAGS.gpu, hashed=hashornot) # 2.hashed.py
+			data_sets = MNIST()
+		elif FLAGS.net == 'hashed2':
+			#from hashed_conv_MNIST import hashed
+			mc = config() # 1.config.py
+			mc.IS_TRAINING = True
+			mc.PRETRAINED_MODEL_PATH = FLAGS.pretrained_model_path
+			mc.PRETRAINED_INFO_PATH = FLAGS.pretrained_info_path
+			#model = hashed(mc, gpu_id=FLAGS.gpu, hashed=hashornot) # 2.hashed.py
+			data_sets = IMGNET()
 
-		data_sets = predataset()
 
 		#-----------------------------------------------------------------
 		@jit(nopython=True, cache=True)
-		def TK_TRANSFORM(grad, hash_num, hash_index):
+		def TK_TRANSFORM_FC(grad, hash_num, hash_index):
 
 			temp_centroid = np.zeros(hash_num)
 			temp_centroid_num = np.zeros(hash_num)
@@ -117,6 +134,32 @@ def train():
 			for i in xrange(grad.shape[0]):
 				for i2 in xrange(grad.shape[1]):
 					temp_grad[i][i2]=temp_centroid[hash_index[i][i2]]
+			return temp_grad;
+		@jit(nopython=True, cache=True)
+		def TK_TRANSFORM_CONV(grad, hash_num, hash_index):
+
+			temp_centroid = np.zeros(hash_num)
+			temp_centroid_num = np.zeros(hash_num)
+			temp_grad = np.zeros((grad.shape[0],grad.shape[1], grad.shape[2], grad.shape[3]))
+			#tk!! JUST like STEP2
+			for i in xrange(grad.shape[0]):
+				for i2 in xrange(grad.shape[1]):
+					for i3 in xrange(grad.shape[2]):
+						for i4 in xrange(grad.shape[3]):
+							temp_centroid[hash_index[i][i2][i3][i4]] += grad[i][i2][i3][i4];
+							temp_centroid_num[hash_index[i][i2][i3][i4]] += 1;
+
+			for i in xrange(hash_num):
+				if temp_centroid_num[i] != 0:
+					temp_centroid[i] /= temp_centroid_num[i];
+
+			#tk!! JUST like STEP3
+			#return temp_centroid[hash_index];
+			for i in xrange(grad.shape[0]):
+				for i2 in xrange(grad.shape[1]):
+					for i3 in xrange(grad.shape[2]):
+						for i4 in xrange(grad.shape[3]):
+							temp_grad[i][i2][i3][i4]=temp_centroid[hash_index[i][i2][i3][i4]]
 			return temp_grad;
 		#-----------------------------------------------------------------
 		def _load_data(load_to_placeholder=True):
@@ -224,31 +267,39 @@ def train():
 			#**********************main function*******************************
 			if mc.NUM_THREAD > 0: #4
 				#
-				if FLAGS.hashed : 
+				if hashornot : 
 					loss_value = sess.run(model.loss, options=run_options)
 					grads = sess.run([grad for (grad,var) in model.grads_vars ], options=run_options)
 
 					feed_dict = {}
 					for i in xrange(len(model.grads_placeholder)):
-						if grads[i].ndim != 2 :
-							feed_dict[model.grads_placeholder[i][0]] = grads[i];
+						Lindex = model.grads_placeholder[i][0];
+						Lname = model.grads_placeholder[i][1].name.split('/')[0];
+						Ltype = model.grads_placeholder[i][1].name.split('/')[1].split(':')[0];
+
+						if Ltype != "weights":
+							feed_dict[Lindex] = grads[i];
 							continue;
-	
-						if str(model.grads_placeholder[i][1].name.split('/')[0]) in model.hash_num.keys():
-							hash_num = model.hash_num[model.grads_placeholder[i][1].name.split('/')[0]];
-							hash_index = model.hash_index[model.grads_placeholder[i][1].name.split('/')[0]];
-							#print("*********************hashnum is{}******************".format(type(hash_num)))
-							#feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], model.grads_placeholder[i][1], hash_num, hash_index);
-							feed_dict[model.grads_placeholder[i][0]] = TK_TRANSFORM(grads[i], hash_num, hash_index);
+
+						if str(Lname) in model.hash_num.keys():
+							if Lname[:-1]=="dense":
+
+								hash_num = model.hash_num[Lname];
+								hash_index = model.hash_index[Lname];
+								#print("*********************hashnum is{}******************".format(type(hash_num)))
+								feed_dict[Lindex] = TK_TRANSFORM_FC(grads[i], hash_num, hash_index);
+							else :
+								hash_num = model.hash_num[Lname];
+								hash_index = model.hash_index[Lname];
+								#print("*********************hashnum is{}******************".format(type(hash_num)))
+								feed_dict[Lindex] = TK_TRANSFORM_CONV(grads[i], hash_num, hash_index);
 
 						else:
-							feed_dict[model.grads_placeholder[i][0]] = grads[i];
+							feed_dict[Lindex] = grads[i];
 							print("ERROR");
 							continue;
 
-
 					sess.run(model.train_op2, feed_dict=feed_dict ,options=run_options)
-
 				else : 
 					print("ERRRORORORORORORTK")
 					_, loss_value = sess.run([model.train_op, model.loss], options=run_options)
@@ -289,69 +340,107 @@ def train():
 		coord.join(threads)
 		#																		   #
 		#***************************************************************************
-		save_tuple = {};
-		save_tuple2 = {};
-		save_temp = [];	
-		for i, tense in enumerate(model.model_params):
-			hash_num = tense.name.split('/')[0];
-			hash_num2 = tense.name.split('/')[1][:-2];
-			#print("hash-num", hash_num);
-			#print("hash-num", hash_num2);
+		if hashornot :
 
-			if hash_num2=='weights':
-				#print("weights!!!!!!!!!!!!")
-				save_temp.append(tense.eval(sess));
-			elif hash_num2=='biases':
-				#print("biases!!!!!!!!!!!!")
-				save_temp.append(tense.eval(sess));
-				save_tuple[hash_num]=save_temp;
-				save_temp = [];
+			save_tuple = {};
+			save_tuple2 = {};
+			save_temp = [];	
+			for i, tense in enumerate(model.model_params):
+				hash_num = tense.name.split('/')[0];
+				hash_num2 = tense.name.split('/')[1][:-2];
+				#print("hash-num", hash_num, " ", hash_num[:-1]);
+				#print("hash-num", hash_num2);
 
-				save_temp.append(model.hash_index[hash_num]) # index array
-				save_temp.append(model.hash_num[hash_num]) # nCentroid
-				save_temp.append(model.blocked[hash_num]) # blocked
-				save_temp.append(model.num_block[hash_num]) # num_block
-				save_tuple2[hash_num] = save_temp;
-				save_temp = [];
 
+
+				if hash_num[:-1] == 'dense':
+					if hash_num2=='weights':
+						print("FCweights!!!!!!!!!!!!")
+						#1 : weight
+						save_temp.append(tense.eval(sess));
+					elif hash_num2=='biases':
+						print("FCbiases!!!!!!!!!!!!")
+						#2 : bias
+						save_temp.append(tense.eval(sess));
+						save_tuple[hash_num]=save_temp;
+						save_temp = [];
+
+						#3 : hash index
+						save_temp.append(model.hash_index[hash_num]) # index array
+						#4 : number of index
+						save_temp.append(model.hash_num[hash_num]) # nCentroid
+						#5 : Blocked
+						save_temp.append(model.blocked[hash_num]) # blocked
+						#6 : # of block
+						save_temp.append(model.num_block[hash_num]) # num_block
+						save_tuple2[hash_num] = save_temp;
+						save_temp = [];
+				else :
+					print("CONV!!!!!!!!!!!!");
+					#1 : weight
+					save_temp.append(tense.eval(sess));
+					save_tuple[hash_num]=save_temp;
+					save_temp = [];
+
+					#3 : hash index
+					save_temp.append(model.hash_index[hash_num]);
+					#4 : number of index
+					save_temp.append(model.hash_num[hash_num]);
+					#5 : Blocked
+					save_temp.append(model.blocked[hash_num]) # blocked
+					#6 : # of block
+					save_temp.append(model.num_block[hash_num]) # num_block
+					save_tuple2[hash_num] = save_temp;
+					save_temp = [];			
+					
 		
-		for tuple_tem in save_tuple.keys():
-			print('tuple_tem key is', tuple_tem)
+			for tuple_tem in save_tuple.keys():
+				print('tuple_tem key is', tuple_tem)
 
-		for tuple_tem in save_tuple.values():
-			#print('tuple_tem key is', tuple_tem)
-			for tuple_temp2 in tuple_tem:
-				print('tuple_tem key is', tuple_temp2.shape)
+			for tuple_tem in save_tuple.values():
+				#print('tuple_tem key is', tuple_tem)
+				for tuple_temp2 in tuple_tem:
+					print('tuple_tem key is', tuple_temp2.shape)
 
-		'''
-		print("---------------------------------------------------------------")
-		print("tk is ", save_tuple['dense1'][0].shape)		
-		print("tk is ", save_tuple['dense1'][1].shape)		
-		print("tk is ", save_tuple['dense2'][0].shape)		
-		print("tk is ", save_tuple['dense2'][1].shape)		
+			'''
+			print("---------------------------------------------------------------")
+			print("tk is ", save_tuple['dense1'][0].shape)		
+			print("tk is ", save_tuple['dense1'][1].shape)		
+			print("tk is ", save_tuple['dense2'][0].shape)		
+			print("tk is ", save_tuple['dense2'][1].shape)		
 		
-		print("tk is ", save_tuple2['dense1'][0].shape)		
-		print("tk is ", save_tuple2['dense1'][1])		
-		print("tk is ", save_tuple2['dense2'][0].shape)		
-		print("tk is ", save_tuple2['dense2'][1])		
-		print("---------------------------------------------------------------")
-		'''
-		print("tk is ", save_tuple['dense1'][0])		
-		print("tk is ", save_tuple2['dense1'][0])		
-		print("tk is ", save_tuple['dense2'][0])		
-		print("tk is ", save_tuple2['dense2'][0])		
+			print("tk is ", save_tuple2['dense1'][0].shape)		
+			print("tk is ", save_tuple2['dense1'][1])		
+			print("tk is ", save_tuple2['dense2'][0].shape)		
+			print("tk is ", save_tuple2['dense2'][1])		
+			print("---------------------------------------------------------------")
+			'''
+			print("tk is ", save_tuple['dense1'][0])		
+			print("tk is ", save_tuple2['dense1'][0])		
+			print("tk is ", save_tuple['dense2'][0])		
+			print("tk is ", save_tuple2['dense2'][0])		
 		
 		
-		#saver.save(sess,os.path.join(FLAGS.train_dir,"./MNIST_TRAIN.ckpt"));
+			#saver.save(sess,os.path.join(FLAGS.train_dir,"./MNIST_TRAIN.ckpt"));
 
 
-		import pickle
-		#os.getcwd()
-		with open(os.path.join(FLAGS.train_dir, 'MNIST_POSTTRAIN.pkl'), 'wb') as f:
-			pickle.dump(save_tuple, f);
-
-		with open(os.path.join(FLAGS.train_dir, 'MNIST_POSTTRAIN_INFO.pkl'), 'wb') as f:
-			pickle.dump(save_tuple2, f);
+			import pickle
+			#os.getcwd()
+			if FLAGS.net == 'hashed_fc_MNIST':
+				with open(os.path.join(FLAGS.train_dir, 'MNIST_POST_FC.pkl'), 'wb') as f:
+					pickle.dump(save_tuple, f);
+				with open(os.path.join(FLAGS.train_dir, 'MNIST_POST_FC_INFO.pkl'), 'wb') as f:
+					pickle.dump(save_tuple2, f);
+			elif FLAGS.net == 'hashed_conv_MNIST':
+				with open(os.path.join(FLAGS.train_dir, 'MNIST_POST_CONV.pkl'), 'wb') as f:
+					pickle.dump(save_tuple, f);
+				with open(os.path.join(FLAGS.train_dir, 'MNIST_POST_CONV_INFO.pkl'), 'wb') as f:
+					pickle.dump(save_tuple2, f);
+			elif FLAGS.net == 'hashed_conv_IMGNET':
+				with open(os.path.join(FLAGS.train_dir, 'IMGNET_POST_CONV.pkl'), 'wb') as f:
+					pickle.dump(save_tuple, f);
+				with open(os.path.join(FLAGS.train_dir, 'IMGNET_POST_CONV_INFO.pkl'), 'wb') as f:
+					pickle.dump(save_tuple2, f);
 
 
 	

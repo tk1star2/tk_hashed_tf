@@ -105,6 +105,8 @@ class hashed():
 			#---------------------------------------------------------------------------
 			self.hash_index = {};
 			self.hash_num = {};
+			self.num_block = {};
+			self.blocked = {};
 	
 			print("-------------hashed is false????{}----------".format(hashed))
 			
@@ -136,7 +138,7 @@ class hashed():
 		#dense2 = self._fc_layer('dense2', dense1, hiddens=10, flatten=False)
 		#self.preds = tf.nn.dropout(dense2, self.keep_prob, name='drop3')
 	#---------------------------------------------------------------------------------
-	def _add_forward_graph(self, hashed):
+	def _add_forward_graph(self, hashed=False):
 		"""NN architecture."""
 
 		mc = self.mc
@@ -150,18 +152,29 @@ class hashed():
 
 		# (?, 28,28,1) > (?, 28,28,32)
 		if hashed=="True":
-			conv1 = self._hashed_conv_layer('conv1', self.image_input, filters=32, size=3, stride=1, padding='SAME', relu=True, centroid_num=256, blocked=False, blocked_param=32);
+			conv1 = self._hashed_conv_layer('conv1', self.image_input, filters=32, size=3, stride=1, padding='SAME', relu=True, centroid_num=65536, blocked=True, blocked_param=32);#256
 			pool1 = self._pooling_layer('pool1', conv1, size=2, stride=2, padding='SAME');
 
-			conv2 = self._hashed_conv_layer('conv2', pool1, filters=64, size=3, stride=1, padding='SAME', relu=True, centroid_num=15384, blocked=False, blocked_param=64);
+			conv2 = self._hashed_conv_layer('conv2', pool1, filters=64, size=3, stride=1, padding='SAME', relu=True, centroid_num=65536, blocked=True, blocked_param=64);#15384
 			pool2 = self._pooling_layer('pool2', conv2, size=2, stride=2, padding='SAME');
 			
-			conv3 = self._hashed_conv_layer('conv3', pool2, filters=128, size=3, stride=1, padding='SAME', relu=True, centroid_num=65536, blocked=False, blocked_param=64);
+			conv3 = self._hashed_conv_layer('conv3', pool2, filters=128, size=3, stride=1, padding='SAME', relu=True, centroid_num=65536, blocked=True, blocked_param=64);#65536
 			pool3 = self._pooling_layer('pool3', conv3, size=2, stride=2, padding='SAME');
 
-			dense1 = self._hashed_fc_layer('dense1', pool3, hiddens=625, flatten=True, relu=True, centroid_num=65536, blocked=True, blocked_param=64);
+			dense1 = self._hashed_fc_layer('dense1', pool3, hiddens=625, flatten=True, relu=True, centroid_num=262144, blocked=True, blocked_param=64);#65536
 
-			self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=1250, blocked=True, blocked_param=5);
+			self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=1250, blocked=True, blocked_param=5);#1250
+			# 100 x (28,28,1)
+			# --------------- conv1 : (3,3,1) x 32
+			# 100 x (14,14,32)
+			# --------------- conv2 : (3,3,32) x 64
+			# 100 x (7,7,64)
+			# --------------- conv3 : (3,3,64) x 128
+			# 100 x (4,4,128) = 100 x 2048
+			# --------------- dense1 : 2048 x 625
+			# 100 x 2048
+			# --------------- dense2 : 625 x 10
+			# 100 x 10
 		else :
 			conv1 = self._conv_layer('conv1', self.image_input, filters=32, size=3, stride=1, padding='SAME', relu=True);
 			pool1 = self._pooling_layer('pool1', conv1, size=2, stride=2, padding='SAME');
@@ -248,6 +261,7 @@ class hashed():
 
 		self.global_step = tf.Variable(0, name='global_step', trainable=False)
 		# decayed_learning_rate = learning_rate * decay_rate ^ (global_step / decay_steps)
+		# staircase function: step function!!
 		lr = tf.train.exponential_decay(mc.LEARNING_RATE,self.global_step,mc.DECAY_STEPS,mc.LR_DECAY_FACTOR, staircase=True)
 
 		tf.summary.scalar('learning_rate', lr)
@@ -374,6 +388,7 @@ class hashed():
 					try:
 						# check the size before layout transf hiddens-1000, dim 784
 						assert kernel_val.shape == (hiddens, dim), 'kernel shape error at {}'.format(layer_name)
+						'''
 						kernel_val = np.reshape(
 							np.transpose(
 								np.reshape(
@@ -384,6 +399,8 @@ class hashed():
 							), # H x W x C x O
 							(dim, -1)
 						) # (H*W*C) x O
+						'''
+						kernel_val = np.transpose(kernel_val, (1,0))
 
 						# check the size after layout transform
 						assert kernel_val.shape == (dim, hiddens), \
@@ -406,11 +423,15 @@ class hashed():
 			kmeans = XXhash(Conv_FC="FC", cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param)
 			self.hash_index[layer_name] = kmeans.label();
 			self.hash_num[layer_name] = kmeans.num_centro();
+			self.blocked[layer_name] = blocked;
+			self.num_block[layer_name] = blocked_param;
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
 
 			if use_pretrained_param:
-				print("1.TKTKTKTK:::::::", kernel_val)
-				print("2.TKTKTKTK:::::::", kmeans.weight())
+				#print("1.TKTKTKTK:::::::", self.hash_index[layer_name])
+				#print("1.TKTKTKTK:::::::", kmeans.num_centro())
+				#print("1.TKTKTKTK:::::::", kmeans.centro())
+				#print("2.TKTKTKTK:::::::", kmeans.weight())
 				kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
 				bias_init = tf.constant(bias_val, dtype=tf.float32)
 			elif xavier:
@@ -539,8 +560,8 @@ class hashed():
 			#print("bias_val {} is {}".format(bias_val.shape, bias_val))
 			#---------------------------------------------------------------------------
 			if use_pretrained_param:
-				print("=============================================================================================================================================here!!!!!")
-				print(kernel_val);
+				print("=============================================================================================================================================here!!!!!", layer_name)
+				#print(kernel_val);
 				kernel_init = tf.constant(kernel_val, dtype=tf.float32)
 				bias_init = tf.constant(bias_val, dtype=tf.float32)
 			elif xavier:
@@ -632,12 +653,16 @@ class hashed():
 			kmeans = XXhash(Conv_FC="conv", cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param)
 			self.hash_index[layer_name] = kmeans.label();
 			self.hash_num[layer_name] = kmeans.num_centro();
+			self.blocked[layer_name] = blocked;
+			self.num_block[layer_name] = blocked_param;
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
 
 			#TO_DO :  check dimension
 			if use_pretrained_param:
-				print("1.TKTKTKTK:::::::", kernel_val)
-				print("2.TKTKTKTK:::::::", kmeans.weight())
+				#print("1.TKTKTKTK:::::::", self.hash_index[layer_name])
+				#print("1.TKTKTKTK:::::::", kmeans.num_centro())
+				#print("1.TKTKTKTK:::::::", kmeans.centro())
+				#print("2.TKTKTKTK:::::::", kmeans.weight())
 				kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
 				if (BIAS_USE) :
 					bias_init = tf.constant(bias_val, dtype=tf.float32)
@@ -758,7 +783,7 @@ class hashed():
 			# re-order the caffe kernel with shape [out, in, h, w] -> tf kernel with
 			# shape [h, w, in, out]
 			if use_pretrained_param:
-				print("=============================================================================================================================================here!!!!!")
+				print("=============================================================================================================================================here!!!!!", layer_name)
 				kernel_init = tf.constant(kernel_val , dtype=tf.float32)
 				if BIAS_USE:
 					bias_init = tf.constant(bias_val, dtype=tf.float32)

@@ -2,6 +2,7 @@
 1.pretrain/MNIST/*
 2.train/__pycache__/*
 2.train/MNIST/train/*
+2.train/MNIST/*
 3.posttrain/__pycache__/*
 3.posttrain/MNIST/*
 4.pruning/__pycache__/*

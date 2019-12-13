@@ -19,7 +19,7 @@ import sys
 import numpy as np
 sys.path.append('../requirement/')
 #from kmeans import kmeans_cluster
-from XXhash_kmeans import XXhash_kmeans
+from T3_XXhash_kmeans import XXhash_kmeans
 
 def _variable_on_device(name, shape, initializer, trainable=True):
   """Helper to create a Variable.
@@ -110,7 +110,7 @@ class hashed():
 	
 
 			#make Tensor
-			self._add_forward_graph()
+			self._add_forward_graph(hashed)
 			print("debug1.................................................add_forward__graph : end")
 			self._add_loss_graph()
 			print("debug2.................................................add_loss_graph : end")
@@ -136,7 +136,7 @@ class hashed():
 		#dense2 = self._fc_layer('dense2', dense1, hiddens=10, flatten=False)
 		#self.preds = tf.nn.dropout(dense2, self.keep_prob, name='drop3')
 	#---------------------------------------------------------------------------------
-	def _add_forward_graph(self):
+	def _add_forward_graph(self, hashed=False):
 		"""NN architecture."""
 
 		mc = self.mc
@@ -150,9 +150,44 @@ class hashed():
 		self.caffemodel_weight = joblib.load(mc.PRETRAINED_MODEL_PATH)
 		self.caffemodel_info = joblib.load(mc.PRETRAINED_INFO_PATH)
 
-		dense1 = self._hashed_fc_layer('dense1', self.image_input, hiddens=1000, flatten=True, centroid_num=256, blocked=True, blocked_param=64)
+		if hashed :
+			conv1 = self._hashed_conv_layer('conv1', self.image_input, filters=32, size=3, stride=1, padding='SAME', relu=True, centroid_num=256, blocked=True, blocked_param=32);#256
+			pool1 = self._pooling_layer('pool1', conv1, size=2, stride=2, padding='SAME');
 
-		self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=20, blocked=True, blocked_param=5)
+			conv2 = self._hashed_conv_layer('conv2', pool1, filters=64, size=3, stride=1, padding='SAME', relu=True, centroid_num=512, blocked=True, blocked_param=64);#15384
+			pool2 = self._pooling_layer('pool2', conv2, size=2, stride=2, padding='SAME');
+			
+			conv3 = self._hashed_conv_layer('conv3', pool2, filters=128, size=3, stride=1, padding='SAME', relu=True, centroid_num=512, blocked=True, blocked_param=64);#65536
+			pool3 = self._pooling_layer('pool3', conv3, size=2, stride=2, padding='SAME');
+
+			dense1 = self._hashed_fc_layer('dense1', pool3, hiddens=625, flatten=True, relu=True, centroid_num=2048, blocked=True, blocked_param=64);#65536
+
+			self.preds = self._hashed_fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False, centroid_num=40, blocked=True, blocked_param=5);#1250
+			# 100 x (28,28,1)
+			# --------------- conv1 : (3,3,1) x 32
+			# 100 x (14,14,32)
+			# --------------- conv2 : (3,3,32) x 64
+			# 100 x (7,7,64)
+			# --------------- conv3 : (3,3,64) x 128
+			# 100 x (4,4,128) = 100 x 2048
+			# --------------- dense1 : 2048 x 625
+			# 100 x 2048
+			# --------------- dense2 : 625 x 10
+			# 100 x 10
+
+		else :
+			conv1 = self._conv_layer('conv1', self.image_input, filters=32, size=3, stride=1, padding='SAME', relu=True);
+			pool1 = self._pooling_layer('pool1', conv1, size=2, stride=2, padding='SAME');
+
+			conv2 = self._conv_layer('conv2', pool1, filters=64, size=3, stride=1, padding='SAME', relu=True);
+			pool2 = self._pooling_layer('pool2', conv2, size=2, stride=2, padding='SAME');
+			
+			conv3 = self._conv_layer('conv3', pool2, filters=128, size=3, stride=1, padding='SAME', relu=True);
+			pool3 = self._pooling_layer('pool3', conv3, size=2, stride=2, padding='SAME');
+
+			dense1 = self._fc_layer('dense1', pool3, hiddens=625, flatten=True, relu=True);
+
+			self.preds = self._fc_layer('dense2', dense1, hiddens=10, flatten=False, relu=False);
 
 		#preds :(100, 10)
 		#print("tk :preds is this {}".format(self.preds))
@@ -347,6 +382,7 @@ class hashed():
 					try:
 						# check the size before layout transf hiddens-1000, dim 784
 						assert kernel_val.shape == (hiddens, dim), 'kernel shape error at {}'.format(layer_name)
+						'''
 						kernel_val = np.reshape(
 							np.transpose(
 								np.reshape(
@@ -357,6 +393,8 @@ class hashed():
 							), # H x W x C x O
 							(dim, -1)
 						) # (H*W*C) x O
+						'''
+						kernel_val = np.transpose(kernel_val, (1,0))
 
 						# check the size after layout transform
 						assert kernel_val.shape == (dim, hiddens), \
@@ -378,8 +416,13 @@ class hashed():
 
 			index_array=ci[layer_name][0];
 			before_nCentroid=ci[layer_name][1];
+			#block=ci[layer_name][2]
+			#num_block=ci[layer_name][3]
+			block = blocked
+			num_block = blocked_param
 
-			kmeans = XXhash_kmeans(cWeights=kernel_val, nCluster=centroid_num, blocked=blocked, blocked_param=blocked_param, XXarray=index_array, XXnCluster=before_nCentroid);
+			kmeans = XXhash_kmeans(Conv_FC="FC", cWeights=kernel_val, nCluster=centroid_num, blocked=block, blocked_param=num_block, XXarray=index_array, XXnCluster=before_nCentroid);
+
 			self.hash_index[layer_name] = kmeans.label();
 			self.hash_num[layer_name] = kmeans.num_centro();
 			self.blocked[layer_name] = blocked;
@@ -387,9 +430,10 @@ class hashed():
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
 
 			if use_pretrained_param:
-				print("1.TKTKTKTK:::::::", kernel_val)
+				print("1.TKTKTKTK:::::::", self.hash_index[layer_name])
+				print("1.TKTKTKTK:::::::", kmeans.num_centro())
+				print("1.TKTKTKTK:::::::", kmeans.centro())
 				print("2.TKTKTKTK:::::::", kmeans.weight())
-				print("3.TKTKTKTK:::::::", kmeans.label())
 				kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
 				bias_init = tf.constant(bias_val, dtype=tf.float32)
 			elif xavier:
@@ -478,6 +522,7 @@ class hashed():
 					try:
 						# check the size before layout transf hiddens-1000, dim 784
 						assert kernel_val.shape == (hiddens, dim), 'kernel shape error at {}'.format(layer_name)
+						'''
 						kernel_val = np.reshape(
 							np.transpose(
 								np.reshape(
@@ -488,6 +533,8 @@ class hashed():
 							), # H x W x C x O
 							(dim, -1)
 						) # (H*W*C) x O
+						'''
+						kernel_val = np.transpose(kernel_val, (1,0))
 						# check the size after layout transform
 						assert kernel_val.shape == (dim, hiddens),'kernel shape error at {}'.format(layer_name)
 					except:
@@ -566,18 +613,28 @@ class hashed():
 	#---------------------------------------------------------------------------
 	def _hashed_conv_layer(
 		self, layer_name, inputs, filters, size, stride, padding='SAME', hashed=True,
-		freeze=False, xavier=False, relu=True, stddev=0.001, centroid_num=32):
+		freeze=False, xavier=False, relu=True, stddev=0.001, centroid_num=32,  blocked=False, blocked_param=64):
 
 		mc = self.mc
 		use_pretrained_param = False
 		if mc.LOAD_PRETRAINED_MODEL:
 			cw = self.caffemodel_weight
+			ci = self.caffemodel_info
+			if (len(cw[layer_name])!=1) :
+				BIAS_USE = True;
+			else :
+				BIAS_USE = False;
 			if layer_name in cw:
-				kernel_val = np.transpose(cw[layer_name][0], [2,3,1,0])
-				bias_val = cw[layer_name][1]
+				#kernel_val = np.transpose(cw[layer_name][0], [2,3,1,0])
+				kernel_val = cw[layer_name][0];
+				if (BIAS_USE) :
+					bias_val = cw[layer_name][1]
 				# check the shape
+				print("size{}, size{}, size{}, size{} ".format(size,size,inputs.get_shape().as_list()[-1], filters));
+				print("kernel_val.shape is {}".format(kernel_val.shape))
+				print("inputs.get_shape() is {}".format(inputs.get_shape()))
 				if (kernel_val.shape == (size, size, inputs.get_shape().as_list()[-1], filters)) \
-					and (bias_val.shape == (filters, )):
+					and (BIAS_USE==False or bias_val.shape == (filters, )):
 					use_pretrained_param = True
 				else:
 					print ('Shape of the pretrained parameter of {} does not match, '
@@ -586,43 +643,60 @@ class hashed():
 				print ('Cannot find {} in the pretrained model. Use randomly initialized '
 					'parameters'.format(layer_name))
 
-		if mc.DEBUG_MODE:
-			print('Input tensor shape to {}: {}'.format(layer_name, inputs.get_shape()))
-
 		with tf.variable_scope(layer_name) as scope:
 			channels = inputs.get_shape()[3]
 
-			kmeans = XXhash(cWeights=kernel_val, nCluster=centroid_num)
+			index_array=ci[layer_name][0];
+			before_nCentroid=ci[layer_name][1];
+			#block=ci[layer_name][2]
+			#num_block=ci[layer_name][3]
+			block = blocked
+			num_block = blocked_param
+
+			kmeans = XXhash_kmeans(Conv_FC="conv", cWeights=kernel_val, nCluster=centroid_num, blocked=block, blocked_param=num_block, XXarray=index_array, XXnCluster=before_nCentroid);
+
 			self.hash_index[layer_name] = kmeans.label();
 			self.hash_num[layer_name] = kmeans.num_centro();
+			self.blocked[layer_name] = blocked;
+			self.num_block[layer_name] = blocked_param;
 			#print("tk: kmeans weight size is ", kmeans.weight().shape)
 
 			#TO_DO :  check dimension
 			if use_pretrained_param:
-				print("1.TKTKTKTK:::::::", kernel_val)
+				print("1.TKTKTKTK:::::::", self.hash_index[layer_name])
+				print("1.TKTKTKTK:::::::", kmeans.num_centro())
+				print("1.TKTKTKTK:::::::", kmeans.centro())
 				print("2.TKTKTKTK:::::::", kmeans.weight())
 				kernel_init = tf.constant(kmeans.weight(), dtype=tf.float32)
-				bias_init = tf.constant(bias_val, dtype=tf.float32)
+				if (BIAS_USE) :
+					bias_init = tf.constant(bias_val, dtype=tf.float32)
 			elif xavier:
 				kernel_init = tf.contrib.layers.xavier_initializer()
-				bias_init = tf.constant_initializer(0.0)
+				if (BIAS_USE) :
+					bias_init = tf.constant_initializer(0.0)
 			else:
 				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
 				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
 				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
 				print("ERROR!!!!!!!!!!!!!!!!!!!!!TK");
 				kernel_init = tf.truncated_normal_initializer(stddev=stddev, dtype=tf.float32)
-				bias_init = tf.constant_initializer(0.0)
+				if (BIAS_USE) :
+					bias_init = tf.constant_initializer(0.0)
 
 			# re-order the caffe kernel with shape [out, in, h, w] -> tf kernel with
 			# shape [h, w, in, out]
 
 			kernel = _variable_with_weight_decay(
-				'kernels', shape=[size, size, int(channels), filters],
+				'weights', shape=[size, size, int(channels), filters],
 				wd=mc.WEIGHT_DECAY, initializer=kernel_init, trainable=(not freeze))
 
-			biases = _variable_on_device('biases', [filters], bias_init, trainable=(not freeze))
-			self.model_params += [kernel, biases]
+			if (BIAS_USE) :
+				biases = _variable_on_device('biases', [filters], bias_init, trainable=(not freeze))
+			if (BIAS_USE) :
+				self.model_params += [kernel, biases]
+			else :
+				self.model_params += [kernel]
+				
 
 			#-------------------real tensorflow convolution 2d-------------------------------
 			print("inputs?? {}".format(inputs))
@@ -631,7 +705,10 @@ class hashed():
 			print("conv?? {}".format(conv))
 			#--------------------------------------------------------------------------------
 
-			conv_bias = tf.nn.bias_add(conv, biases, name='bias_add')
+			if (BIAS_USE) :
+				conv_bias = tf.nn.bias_add(conv, biases, name='bias_add')
+			else :
+				conv_bias = conv
  
 			if relu:
 				out = tf.nn.relu(conv_bias, 'relu')
@@ -674,14 +751,26 @@ class hashed():
 
 		mc = self.mc
 		use_pretrained_param = False
+		
 		if mc.LOAD_PRETRAINED_MODEL:
 			cw = self.caffemodel_weight
+			if (len(cw[layer_name])!=1) :
+				BIAS_USE = True;
+			else :
+				BIAS_USE = False;
+
 			if layer_name in cw:
-				kernel_val = np.transpose(cw[layer_name][0], [2,3,1,0])
-				bias_val = cw[layer_name][1]
+				print("layer name is ", cw[layer_name][0].shape);
+				#kernel_val = np.transpose(cw[layer_name][0], [2,3,1,0])
+				kernel_val = cw[layer_name][0];
+				if (BIAS_USE) :
+					bias_val = cw[layer_name][1]
 				# check the shape
+				print("size{}, size{}, size{}, size{} ".format(size,size,inputs.get_shape().as_list()[-1], filters));
+				print("kernel_val.shape is {}".format(kernel_val.shape))
+				print("inputs.get_shape() is {}".format(inputs.get_shape()))
 				if (kernel_val.shape == (size, size, inputs.get_shape().as_list()[-1], filters)) \
-					and (bias_val.shape == (filters, )):
+					and (BIAS_USE==False or bias_val.shape == (filters, )):
 					use_pretrained_param = True
 				else:
 					print ('Shape of the pretrained parameter of {} does not match, '
@@ -690,33 +779,40 @@ class hashed():
 				print ('Cannot find {} in the pretrained model. Use randomly initialized '
 					'parameters'.format(layer_name))
 
-		if mc.DEBUG_MODE:
-			print('Input tensor shape to {}: {}'.format(layer_name, inputs.get_shape()))
 
 		with tf.variable_scope(layer_name) as scope:
 			channels = inputs.get_shape()[3]
 
+			
 			# re-order the caffe kernel with shape [out, in, h, w] -> tf kernel with
 			# shape [h, w, in, out]
 			if use_pretrained_param:
-				if mc.DEBUG_MODE:
-					print ('Using pretrained model for {}'.format(layer_name))
+				print("=============================================================================================================================================here!!!!!", layer_name)
 				kernel_init = tf.constant(kernel_val , dtype=tf.float32)
-				bias_init = tf.constant(bias_val, dtype=tf.float32)
+				if BIAS_USE:
+					bias_init = tf.constant(bias_val, dtype=tf.float32)
 			elif xavier:
 				kernel_init = tf.contrib.layers.xavier_initializer_conv2d()
-				bias_init = tf.constant_initializer(0.0)
+				if BIAS_USE:
+					bias_init = tf.constant_initializer(0.0)
 			else:
 				kernel_init = tf.truncated_normal_initializer(
 					stddev=stddev, dtype=tf.float32)
-				bias_init = tf.constant_initializer(0.0)
+				if BIAS_USE:
+					bias_init = tf.constant_initializer(0.0)
 
 			kernel = _variable_with_weight_decay(
-				'kernels', shape=[size, size, int(channels), filters],
+				'weights', shape=[size, size, int(channels), filters],
 				wd=mc.WEIGHT_DECAY, initializer=kernel_init, trainable=(not freeze))
 
-			biases = _variable_on_device('biases', [filters], bias_init, trainable=(not freeze))
-			self.model_params += [kernel, biases]
+			if BIAS_USE:
+				biases = _variable_on_device('biases', [filters], bias_init, trainable=(not freeze))
+			
+			if BIAS_USE:
+				self.model_params += [kernel, biases]
+			else :
+				self.model_params += [kernel]
+			
 
 			#-------------------real tensorflow convolution 2d-------------------------------
 			print("inputs?? {}".format(inputs))
@@ -725,7 +821,10 @@ class hashed():
 			print("conv?? {}".format(conv))
 			#--------------------------------------------------------------------------------
 
-			conv_bias = tf.nn.bias_add(conv, biases, name='bias_add')
+			if BIAS_USE :
+				conv_bias = tf.nn.bias_add(conv, biases, name='bias_add')
+			else :
+				conv_bias = conv
  
 			if relu:
 				out = tf.nn.relu(conv_bias, 'relu')
@@ -742,4 +841,32 @@ class hashed():
 	
 			self.activation_counter.append((layer_name, out_shape[1]*out_shape[2]*out_shape[3]))
 
+			print("END : ", out.get_shape())
+			return out
+	#---------------------------------------------------------------------------
+	# Pooling layer
+	"""Pooling layer operation constructor.
+		Args:
+			layer_name: layer name.
+			inputs: input tensor
+			size: kernel size.
+			stride: stride
+			padding: 'SAME' or 'VALID'. See tensorflow doc for detailed description.
+		Returns:
+			A pooling layer operation.
+	"""
+	#---------------------------------------------------------------------------
+	def _pooling_layer(
+		self, layer_name, inputs, size, stride, padding='SAME'):
+
+		with tf.variable_scope(layer_name) as scope:
+			out =  tf.nn.max_pool(inputs, 
+						ksize=[1, size, size, 1], 
+						strides=[1, stride, stride, 1],
+						padding=padding)
+			print("inputs.get_shape() is {}".format(inputs.get_shape()))
+
+			activation_size = np.prod(out.get_shape().as_list()[1:])
+			self.activation_counter.append((layer_name, activation_size))
+			print("END : ", out.get_shape())
 			return out

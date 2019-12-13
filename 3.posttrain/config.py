@@ -44,7 +44,7 @@ def base_model_config(dataset='MNIST'):
   cfg.BATCH_SIZE = 100			#original : 20
 
   # max # of steps for batch
-  cfg.MAX_STEP = 10000 			# original : 100 0000
+  cfg.MAX_STEP = 10000 			# original : 100 0000 / good :10000
 
   # check point step
   cfg.CHECKPOINT_STEP = 1000	# original : 1000
@@ -65,10 +65,10 @@ def base_model_config(dataset='MNIST'):
 
   # multiply the learning rate by this factor
   # decayed_lr  = lr * decay_factorglobal/decay_step)
-  cfg.LR_DECAY_FACTOR = 0.07 	# original : 0.1
+  cfg.LR_DECAY_FACTOR = 0.03 	# original : 0.1 / good : 0.06
 
   # learning rate
-  cfg.LEARNING_RATE = 0.10 		# original : 0.005
+  cfg.LEARNING_RATE = 0.05 		# original : 0.005 / good : 0.09
   #-------------------------------------------------------------------
 
   # wether to load pre-trained model

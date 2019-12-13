@@ -338,30 +338,56 @@ def train():
 		#***************************************************************************
 
 		if FLAGS.hashed == "True": 
-			save_tuple = {};
-			save_tuple2 = {};
+			save_tuple = {}; # real VALUE
+			save_tuple2 = {}; # INFO
 			save_temp = [];	
 			for i, tense in enumerate(model.model_params):
 				hash_num = tense.name.split('/')[0];
 				hash_num2 = tense.name.split('/')[1][:-2];
-				#print("hash-num", hash_num);
-				#print("hash-num", hash_num2);
+				print("hash-num", hash_num, " ", hash_num[:-1]);
+				print("hash-num", hash_num2);
 
-				if hash_num2=='weights':
-					#print("weights!!!!!!!!!!!!")
-					save_temp.append(tense.eval(sess));
-				elif hash_num2=='biases':
-					#print("biases!!!!!!!!!!!!")
+				if hash_num[:-1] == 'dense':
+					if hash_num2=='weights':
+						print("FCweights!!!!!!!!!!!!")
+						#1 : weight
+						save_temp.append(tense.eval(sess));
+					elif hash_num2=='biases':
+						print("FCbiases!!!!!!!!!!!!")
+						#2 : bias
+						save_temp.append(tense.eval(sess));
+						save_tuple[hash_num]=save_temp;
+						save_temp = [];
+
+						#3 : hash index
+						save_temp.append(model.hash_index[hash_num]) # index array
+						#4 : number of index
+						save_temp.append(model.hash_num[hash_num]) # nCentroid
+						#5 : Blocked
+						save_temp.append(model.blocked[hash_num]) # blocked
+						#6 : # of block
+						save_temp.append(model.num_block[hash_num]) # num_block
+						save_tuple2[hash_num] = save_temp;
+						save_temp = [];
+				else :
+					print("CONV!!!!!!!!!!!!");
+					#1 : weight
 					save_temp.append(tense.eval(sess));
 					save_tuple[hash_num]=save_temp;
 					save_temp = [];
 
-					save_temp.append(model.hash_index[hash_num]) # index array
-					save_temp.append(model.hash_num[hash_num]) # nCentroid
+					#3 : hash index
+					save_temp.append(model.hash_index[hash_num]);
+					#4 : number of index
+					save_temp.append(model.hash_num[hash_num]);
+					#5 : Blocked
+					save_temp.append(model.blocked[hash_num]) # blocked
+					#6 : # of block
+					save_temp.append(model.num_block[hash_num]) # num_block
 					save_tuple2[hash_num] = save_temp;
-					save_temp = [];
-
-			'''
+					save_temp = [];			
+			
+		
 			for tuple_tem in save_tuple.keys():
 				print('tuple_tem key is', tuple_tem)
 
@@ -370,7 +396,7 @@ def train():
 				for tuple_temp2 in tuple_tem:
 					print('tuple_tem key is', tuple_temp2.shape)
 
-
+			'''
 			print("---------------------------------------------------------------")
 			print("tk is ", save_tuple['dense1'][0].shape)		
 			print("tk is ", save_tuple['dense1'][1].shape)		

@@ -44,7 +44,7 @@ def base_model_config(dataset='MNIST'):
   cfg.BATCH_SIZE = 100			#original : 20
 
   # max # of steps for batch
-  cfg.MAX_STEP = 10000 			# original : 100 0000
+  cfg.MAX_STEP = 10000 			# original : 100 0000 // good : 10000
 
   # check point step
   cfg.CHECKPOINT_STEP = 1000	# original : 1000
@@ -64,11 +64,11 @@ def base_model_config(dataset='MNIST'):
   cfg.MOMENTUM = 0.9			# original : 0.9
 
   # multiply the learning rate by this factor
-  # decayed_lr  = lr * decay_factorglobal/decay_step)
-  cfg.LR_DECAY_FACTOR = 0.07 	# original : 0.1
+  # decayed_lr  = lr * decay_factor^(global/decay_step)
+  cfg.LR_DECAY_FACTOR = 0.009 	# original : 0.1 // good : 0.07
 
   # learning rate
-  cfg.LEARNING_RATE = 0.12 		# original : 0.005
+  cfg.LEARNING_RATE = 0.016 		# original : 0.005 // good : 0.12
   #-------------------------------------------------------------------
 
   # wether to load pre-trained model
@@ -84,7 +84,7 @@ def base_model_config(dataset='MNIST'):
   cfg.EXP_THRESH=1.0
 
   # gradients with norm larger than this is going to be clipped.
-  cfg.MAX_GRAD_NORM = 10.0
+  cfg.MAX_GRAD_NORM = 10.0 # original : 10.0
 
   # Whether to do data augmentation
   cfg.DATA_AUGMENTATION = False

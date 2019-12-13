@@ -284,7 +284,7 @@ def train():
 	#pickle.dump(B2,open(os.path.join(SAVE_PATH, 'MNIST.pkl')));
 
 	#os.getcwd()
-	with open(os.path.join(SAVE_PATH, 'MNIST_conv.pkl'), 'wb') as f:
+	with open(os.path.join(SAVE_PATH, 'MNIST_CONV.pkl'), 'wb') as f:
 		pickle.dump(save_tuple, f);
 
 
